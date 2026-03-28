@@ -1,0 +1,59 @@
+---
+title: "Webhook WhatsApp"
+description: "Meta Cloud API envía eventos a este endpoint — mensajes recibidos, confirmaciones de entrega."
+---
+
+## Endpoints
+
+```
+GET  /webhook/whatsapp   → verificación del webhook (Meta challenge)
+POST /webhook/whatsapp   → eventos entrantes de Meta
+```
+
+Estos endpoints **no requieren autenticación** con `X-API-Key` — son llamados directamente por Meta.
+
+## Configuración en Meta
+
+En Meta Business Manager → WhatsApp → Configuration → Webhook:
+
+- **URL:** `https://comms.panzo.mx/webhook/whatsapp`
+- **Verify token:** el mismo que `META_WEBHOOK_SECRET` configurado en la plataforma
+- **Suscribir a:** `messages`, `message_deliveries`, `message_reads`
+
+## Verificación de firma
+
+Todos los POST de Meta incluyen el header `X-Hub-Signature-256` con un HMAC-SHA256 del payload firmado con `META_WEBHOOK_SECRET`. La plataforma verifica la firma automáticamente y rechaza requests no autorizados.
+
+## Eventos que maneja la plataforma
+
+| Tipo | Acción |
+|------|--------|
+| `messages` | Registra el mensaje entrante |
+| `statuses` | Actualiza el status de entrega del job (sent, delivered, read, failed) |
+
+## Payload de ejemplo (Meta → plataforma)
+
+```json
+{
+  "object": "whatsapp_business_account",
+  "entry": [{
+    "id": "WHATSAPP_BUSINESS_ACCOUNT_ID",
+    "changes": [{
+      "value": {
+        "messaging_product": "whatsapp",
+        "statuses": [{
+          "id": "wamid.xxx",
+          "status": "delivered",
+          "timestamp": "1711641704",
+          "recipient_id": "521234567890"
+        }]
+      },
+      "field": "messages"
+    }]
+  }]
+}
+```
+
+<Note>
+  No necesitas implementar ni llamar a este endpoint desde tu aplicación. Es exclusivamente para la comunicación entre Meta y la plataforma.
+</Note>

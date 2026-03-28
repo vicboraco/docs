@@ -1,0 +1,66 @@
+---
+title: "Email transaccional"
+description: "Envía emails HTML personalizados usando plantillas visuales."
+---
+
+## Cómo funciona
+
+El canal de email usa **Postfix** como MTA con autenticación de dominio completa:
+
+- **SPF** — el IP del servidor está autorizado para enviar en nombre del dominio
+- **DKIM** — cada email lleva firma criptográfica
+- **DMARC** — política de autenticación publicada en DNS
+
+Los emails se renderizan combinando la plantilla HTML almacenada en el servidor con el objeto `data` que envías en el request, usando sintaxis de Go templates (`{{.variable}}`).
+
+## Crear una plantilla
+
+Desde el dashboard de tu cuenta (`/app/me`):
+
+1. Ve a **Email Templates**
+2. Crea una nueva plantilla con el editor visual
+3. Declara las variables que usarás en el panel "Variables" del editor
+4. Guarda — el `template_id` es el slug que usarás en la API
+
+## Enviar un email
+
+```bash
+curl -X POST https://comms.panzo.mx/v1/send/email \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: TU_API_KEY" \
+  -d '{
+    "to_address":  "juan@ejemplo.com",
+    "to_name":     "Juan Pérez",
+    "subject":     "Tu pedido {{.numero}} está listo",
+    "template_id": "pedido-listo",
+    "data": {
+      "numero": "ORD-4521",
+      "fecha":  "28 de marzo de 2026"
+    }
+  }'
+```
+
+### Parámetros
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `to_address` | string | ✅ | Dirección de destino |
+| `to_name` | string | — | Nombre del destinatario |
+| `subject` | string | — | Asunto (soporta variables). Si se omite, usa el subject de la plantilla |
+| `template_id` | string | ✅ | ID de la plantilla HTML |
+| `data` | object | — | Variables para inyectar en la plantilla |
+
+## Variables
+
+Las variables en `data` se inyectan con `{{.NombreDeVariable}}` tanto en el HTML como en el subject.
+
+Ver la guía de [Variables en templates](/guides/variables) para más detalle.
+
+## Warm-up de IP
+
+Si eres un tenant nuevo, los primeros días de envío desde una IP dedicada requieren una rampa gradual para construir reputación:
+
+- **Semana 1–2:** máximo 50–100 emails/día
+- **Semana 3+:** duplicar cada semana
+
+Sin warm-up, los emails pueden llegar a spam. Contáctanos si necesitas orientación.

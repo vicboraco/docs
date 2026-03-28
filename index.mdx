@@ -1,97 +1,59 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Introducción"
+description: "Plataforma multi-canal para envío de comunicaciones transaccionales: Email, WhatsApp, Apple Wallet y Google Wallet."
 ---
 
-## Setting up
+## ¿Qué es CommsPlatform?
 
-Get your documentation site up and running in minutes.
+CommsPlatform es una API unificada para enviar comunicaciones a tus clientes a través de múltiples canales desde una sola integración.
+
+<CardGroup cols={2}>
+  <Card title="Email transaccional" icon="envelope">
+    Envía emails personalizados con HTML usando plantillas visuales. Postfix + DKIM/SPF/DMARC configurados.
+  </Card>
+  <Card title="WhatsApp Business" icon="whatsapp">
+    Envía templates aprobados por Meta con variables dinámicas vía Meta Cloud API.
+  </Card>
+  <Card title="Apple Wallet" icon="apple">
+    Genera y distribuye pases PKPass firmados digitalmente.
+  </Card>
+  <Card title="Google Wallet" icon="google">
+    Crea objetos de Google Wallet y devuelve un save link listo para compartir.
+  </Card>
+</CardGroup>
+
+## Cómo funciona
+
+1. **Haces un POST** a `/v1/send/email` (o whatsapp, o wallet) con tu `X-API-Key`
+2. **Recibes un `job_id`** — la entrega es asíncrona
+3. **Consultas el status** con `GET /v1/jobs/{job_id}` hasta `success` o `failed`
+
+Todo el historial, los cobros y las métricas están disponibles en el dashboard.
+
+## Primeros pasos
 
 <Card
-  title="Start here"
+  title="Inicio rápido"
   icon="rocket"
   href="/quickstart"
   horizontal
 >
-  Follow our three step quickstart guide.
+  Envía tu primer email en menos de 5 minutos.
 </Card>
 
-## Make it yours
+## Referencia
 
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Enviar Email" icon="paper-plane" href="/api-reference/send-email">
+    POST /v1/send/email
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Enviar WhatsApp" icon="message" href="/api-reference/send-whatsapp">
+    POST /v1/send/whatsapp
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Emitir Wallet Pass" icon="wallet" href="/api-reference/send-wallet">
+    POST /v1/send/wallet
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Status de Job" icon="circle-check" href="/api-reference/job-status">
+    GET /v1/jobs/{job_id}
   </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+</CardGroup>

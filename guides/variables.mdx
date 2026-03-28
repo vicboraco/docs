@@ -1,0 +1,70 @@
+---
+title: "Variables en templates"
+description: "Personaliza cada mensaje con datos dinámicos usando sintaxis de Go templates."
+---
+
+## Email: variables en el cuerpo
+
+Las plantillas de email usan sintaxis de **Go templates**. En el editor visual, usa el panel "Variables" para declarar cada variable — aparecerán como Merge Tags disponibles en el diseño.
+
+En el HTML de la plantilla:
+
+```html
+<p>Hola {{.nombre}}, tu pedido <strong>{{.numeroPedido}}</strong> está listo.</p>
+```
+
+En tu request:
+
+```json
+{
+  "template_id": "pedido-listo",
+  "data": {
+    "nombre":       "María García",
+    "numeroPedido": "ORD-9021"
+  }
+}
+```
+
+### Variables en el subject
+
+El campo `subject` también soporta variables:
+
+```json
+{
+  "subject": "Tu pedido {{.numeroPedido}} ha sido enviado",
+  "data": { "numeroPedido": "ORD-9021" }
+}
+```
+
+Si no envías `subject`, se usa el subject guardado en la plantilla (también puede tener variables).
+
+### Nombres de variables
+
+- Sensibles a mayúsculas/minúsculas: `{{.nombre}}` ≠ `{{.Nombre}}`
+- Sin espacios: usa camelCase o snake_case
+- Si una variable no se encuentra en `data`, se renderiza como cadena vacía (no falla)
+
+## WhatsApp: variables posicionales
+
+En WhatsApp los templates usan `{{1}}`, `{{2}}`, `{{3}}`... y se pasan como array `params`:
+
+```
+Template: "Hola {{1}}, tu turno es el {{2}} a las {{3}}."
+```
+
+```json
+{
+  "template_id": "recordatorio_turno",
+  "params": ["Carlos", "15 de abril", "10:00 AM"]
+}
+```
+
+El índice `0` del array corresponde a `{{1}}`, el índice `1` a `{{2}}`, etc.
+
+<Warning>
+  Si el número de elementos en `params` no coincide con las variables del template, Meta rechazará el envío.
+</Warning>
+
+## Wallet: sin variables de texto
+
+Los pases de Wallet (Apple y Google) no usan este sistema de variables — los datos del pase se pasan directamente en el campo `pass_data` de cada request.

@@ -1,0 +1,57 @@
+---
+title: "Google Wallet"
+description: "Crea objetos en Google Wallet y obtén un save link para compartir."
+---
+
+## Requisitos
+
+- Service Account JSON de Google Cloud con permisos de Google Wallet
+- `issuer_id` de Google Pay & Wallet Console
+
+Las credenciales se configuran en el dashboard admin o por tenant si tiene "credenciales propias" habilitadas.
+
+## Emitir un pase
+
+```bash
+curl -X POST https://comms.panzo.mx/v1/send/wallet \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: TU_API_KEY" \
+  -d '{
+    "pass_type": "google",
+    "pass_data": {
+      "class_id":    "3388000000012345678.membresiaGold",
+      "object_id":   "3388000000012345678.usuario-001",
+      "object_data": {
+        "id":      "3388000000012345678.usuario-001",
+        "classId": "3388000000012345678.membresiaGold",
+        "state":   "ACTIVE"
+      }
+    }
+  }'
+```
+
+### Campos de `pass_data`
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `class_id` | string | ID de la clase (issuer_id.className) |
+| `object_id` | string | ID único del objeto (issuer_id.objectId) |
+| `object_data` | object | Payload del Generic Object de Google Wallet |
+
+## Resultado
+
+```json
+{
+  "job_id": "...",
+  "status": "success",
+  "result": {
+    "save_link": "https://pay.google.com/gp/v/save/<jwt>"
+  }
+}
+```
+
+Comparte el `save_link` directamente con el usuario (por email, WhatsApp, SMS, etc.) para que lo agregue a su Google Wallet con un clic.
+
+<Note>
+  El objeto debe cumplir el schema de Google Wallet Generic Object. Consulta la [documentación de Google](https://developers.google.com/wallet/generic/rest/v1/genericobject) para los campos requeridos.
+</Note>

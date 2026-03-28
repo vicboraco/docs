@@ -1,0 +1,81 @@
+---
+title: "Enviar Email"
+description: "POST /v1/send/email — Encola un email transaccional para su entrega."
+---
+
+## Endpoint
+
+```
+POST /v1/send/email
+```
+
+## Headers
+
+| Header | Valor |
+|--------|-------|
+| `X-API-Key` | Tu API key |
+| `Content-Type` | `application/json` |
+
+## Body
+
+```json
+{
+  "to_address":  "usuario@ejemplo.com",
+  "to_name":     "Nombre Apellido",
+  "subject":     "Asunto opcional con {{.variable}}",
+  "template_id": "nombre-de-plantilla",
+  "data": {
+    "variable": "valor",
+    "otra":     "valor2"
+  }
+}
+```
+
+### Campos
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `to_address` | string | ✅ | Dirección de email destino |
+| `to_name` | string | — | Nombre del destinatario (aparece en el "Para:") |
+| `subject` | string | — | Asunto del email. Soporta variables `{{.var}}`. Si se omite, usa el subject de la plantilla |
+| `template_id` | string | ✅ | ID de la plantilla HTML registrada en el dashboard |
+| `data` | object | — | Mapa de variables para inyectar en la plantilla y el subject |
+
+## Ejemplo
+
+```bash
+curl -X POST https://comms.panzo.mx/v1/send/email \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: TU_API_KEY" \
+  -d '{
+    "to_address":  "cliente@ejemplo.com",
+    "to_name":     "Ana López",
+    "subject":     "Tu pedido {{.numero}} está en camino",
+    "template_id": "pedido-enviado",
+    "data": {
+      "numero":   "ORD-7834",
+      "fecha":    "28 de marzo de 2026",
+      "tracking": "MX123456789"
+    }
+  }'
+```
+
+## Respuesta `202`
+
+```json
+{
+  "job_id": "c3d4e5f6-a1b2-...",
+  "status": "pending"
+}
+```
+
+Usa el `job_id` para consultar el resultado con [GET /v1/jobs/{job_id}](/api-reference/job-status).
+
+## Errores
+
+| Código | Causa |
+|--------|-------|
+| `400` | `template_id` vacío o body malformado |
+| `401` | API key inválida |
+| `403` | Canal email no habilitado para tu tenant |
+| `500` | Error al encolar el job |

@@ -1,0 +1,68 @@
+---
+title: "WhatsApp Business"
+description: "Envía mensajes de WhatsApp usando templates aprobados por Meta."
+---
+
+## Requisitos
+
+Para enviar por WhatsApp necesitas:
+
+1. Una cuenta de **Meta Business** con número verificado
+2. **Templates aprobados** por Meta (el proceso toma 24–48 h)
+3. Credenciales configuradas en el dashboard: `phone_number_id` y `access_token`
+
+## Cómo funciona
+
+WhatsApp Business API solo permite enviar **mensajes de template** (HSM) hacia usuarios fuera de una ventana de conversación activa. Los templates deben ser aprobados por Meta antes de poder usarlos.
+
+Las variables del template se pasan en orden como `params`:
+
+```
+Template Meta: "Hola {{1}}, tu cita es el {{2}}."
+params:        ["María", "15 de abril"]
+```
+
+## Enviar un mensaje
+
+```bash
+curl -X POST https://comms.panzo.mx/v1/send/whatsapp \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: TU_API_KEY" \
+  -d '{
+    "phone_number":  "521234567890",
+    "template_id":   "confirmacion_cita",
+    "language_code": "es",
+    "params":        ["María", "15 de abril", "10:00 AM"]
+  }'
+```
+
+### Parámetros
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `phone_number` | string | ✅ | Número en formato internacional sin `+` (ej. `521234567890`) |
+| `template_id` | string | ✅ | Nombre del template en Meta (snake_case) |
+| `language_code` | string | — | Código de idioma del template. Default: `es` |
+| `params` | array | — | Valores para `{{1}}`, `{{2}}`, etc. en orden |
+
+## Gestionar templates
+
+Desde el dashboard admin (`/app/tenants/:id/wa-templates`) puedes registrar los templates de cada tenant con:
+
+- El nombre del template (debe coincidir exactamente con el aprobado en Meta)
+- El código de idioma
+- El esquema de parámetros (para documentar qué va en cada posición)
+
+<Note>
+  El nombre del template en el campo `template_id` debe ser exactamente el mismo que aparece en el Meta Business Manager, incluyendo mayúsculas/minúsculas.
+</Note>
+
+## Webhook de entrada
+
+Meta envía eventos (mensajes recibidos, confirmaciones de entrega) a:
+
+```
+POST https://comms.panzo.mx/webhook/whatsapp
+```
+
+La plataforma verifica la firma `X-Hub-Signature-256` automáticamente.

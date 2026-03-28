@@ -1,0 +1,58 @@
+---
+title: "Apple Wallet"
+description: "Genera pases PKPass firmados para Apple Wallet."
+---
+
+## Requisitos
+
+- Certificado `.p12` de Apple Developer (Pass Type ID)
+- `pass_type_id` (ej. `pass.com.tuempresa.tipo`)
+- `team_id` de Apple Developer (10 caracteres)
+
+Las credenciales se configuran en el dashboard admin o por tenant si tiene "credenciales propias" habilitadas.
+
+## Emitir un pase
+
+```bash
+curl -X POST https://comms.panzo.mx/v1/send/wallet \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: TU_API_KEY" \
+  -d '{
+    "pass_type": "apple",
+    "pass_data": {
+      "serial_number":     "SN-001",
+      "organization_name": "Mi Empresa",
+      "description":       "Membresía Gold",
+      "icon_base64":       ""
+    }
+  }'
+```
+
+### Campos de `pass_data`
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `serial_number` | string | Identificador único del pase |
+| `organization_name` | string | Nombre que aparece en el pase |
+| `description` | string | Descripción del pase |
+| `icon_base64` | string | Ícono PNG en base64 (opcional; usa placeholder si está vacío) |
+
+## Resultado
+
+El job completado retorna el PKPass en base64:
+
+```json
+{
+  "job_id": "...",
+  "status": "success",
+  "result": {
+    "pkpass_base64": "UEsDBBQAAA..."
+  }
+}
+```
+
+Decodifica el base64 y sirve el archivo con `Content-Type: application/vnd.apple.pkpass` para que iOS lo abra directamente en Wallet.
+
+```bash
+echo "UEsDB..." | base64 -d > pase.pkpass
+```

@@ -1,33 +1,63 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: "API Reference"
+description: "Referencia completa de endpoints de CommsPlatform."
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+## Base URL
 
-## Welcome
+```
+https://comms.panzo.mx
+```
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
+## Autenticación
 
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+Todos los endpoints `/v1/` requieren el header `X-API-Key` con tu API key de tenant:
 
-## Authentication
+```bash
+curl https://comms.panzo.mx/v1/send/email \
+  -H "X-API-Key: TU_API_KEY" \
+  ...
+```
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+Las API keys son emitidas por el operador de la plataforma. Si no tienes la tuya, contáctanos.
+
+## Formato
+
+- Todos los requests son `application/json`
+- Todas las respuestas son `application/json`
+- Las fechas usan ISO 8601: `2026-03-28T19:21:44Z`
+
+## Códigos de respuesta
+
+| Código | Significado |
+|--------|-------------|
+| `202` | Job aceptado y en cola |
+| `200` | Consulta exitosa |
+| `400` | Request inválido — revisa el body |
+| `401` | API key inválida o ausente |
+| `403` | Canal no habilitado para tu tenant |
+| `500` | Error interno del servidor |
+
+## Respuesta de error
 
 ```json
-"security": [
-  {
-    "bearerAuth": []
-  }
-]
+{
+  "error": "descripción del error"
+}
 ```
+
+## Rate limits
+
+Los rate limits se configuran por tier de plan (free/pro). Si los excedes, recibirás `429 Too Many Requests`.
+
+## Health check
+
+```bash
+curl https://comms.panzo.mx/health
+```
+
+```json
+{"status": "ok"}
+```
+
+No requiere autenticación.

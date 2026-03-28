@@ -1,0 +1,108 @@
+---
+title: "Emitir Wallet Pass"
+description: "POST /v1/send/wallet — Genera un pase de Apple Wallet o Google Wallet."
+---
+
+## Endpoint
+
+```
+POST /v1/send/wallet
+```
+
+## Headers
+
+| Header | Valor |
+|--------|-------|
+| `X-API-Key` | Tu API key |
+| `Content-Type` | `application/json` |
+
+## Apple Wallet
+
+### Body
+
+```json
+{
+  "pass_type": "apple",
+  "pass_data": {
+    "serial_number":     "SN-001",
+    "organization_name": "Mi Empresa",
+    "description":       "Membresía Premium",
+    "icon_base64":       ""
+  }
+}
+```
+
+### Campos de `pass_data`
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `serial_number` | string | ✅ | Identificador único del pase |
+| `organization_name` | string | ✅ | Nombre de la organización que aparece en el pase |
+| `description` | string | ✅ | Descripción del pase |
+| `icon_base64` | string | — | Ícono PNG en base64. Si está vacío, usa un placeholder 1×1 |
+
+### Respuesta
+
+```json
+{
+  "job_id": "...",
+  "status": "success",
+  "result": {
+    "pkpass_base64": "UEsDBBQAAA..."
+  }
+}
+```
+
+Sirve el archivo decodificado con `Content-Type: application/vnd.apple.pkpass`.
+
+---
+
+## Google Wallet
+
+### Body
+
+```json
+{
+  "pass_type": "google",
+  "pass_data": {
+    "class_id":    "3388000000012345678.membresiaGold",
+    "object_id":   "3388000000012345678.usuario-001",
+    "object_data": {
+      "id":      "3388000000012345678.usuario-001",
+      "classId": "3388000000012345678.membresiaGold",
+      "state":   "ACTIVE"
+    }
+  }
+}
+```
+
+### Campos de `pass_data`
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `class_id` | string | ✅ | `issuer_id.nombre_clase` |
+| `object_id` | string | ✅ | `issuer_id.id_unico_objeto` |
+| `object_data` | object | ✅ | Payload del Generic Object (ver [documentación Google](https://developers.google.com/wallet/generic/rest/v1/genericobject)) |
+
+### Respuesta
+
+```json
+{
+  "job_id": "...",
+  "status": "success",
+  "result": {
+    "save_link": "https://pay.google.com/gp/v/save/<jwt>"
+  }
+}
+```
+
+Comparte el `save_link` con el usuario para que lo agregue a Google Wallet.
+
+## Errores
+
+| Código | Causa |
+|--------|-------|
+| `400` | `pass_type` inválido o `pass_data` faltante |
+| `401` | API key inválida |
+| `403` | Canal wallet no habilitado para tu tenant |
+| `500` | Certificado Apple/.p12 o Service Account Google no configurados |

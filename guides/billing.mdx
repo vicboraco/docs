@@ -1,0 +1,58 @@
+---
+title: "Billing y créditos"
+description: "Cómo funciona el consumo de saldo y las recargas."
+---
+
+## Modelo de créditos
+
+CommsPlatform funciona con **saldo prepago en MXN**. Cada envío exitoso descuenta el costo del canal del saldo de tu cuenta.
+
+| Canal | Costo por envío |
+|-------|----------------|
+| Email | Configurable por el operador |
+| WhatsApp | Configurable por el operador |
+| Apple Wallet | Configurable por el operador |
+| Google Wallet | Configurable por el operador |
+
+<Note>
+  Los precios exactos los define el operador de la plataforma. Consúltalos en **Mi cuenta → Saldo** en el dashboard.
+</Note>
+
+## Ver tu saldo
+
+En el dashboard (`/app/me`) puedes ver:
+
+- **Saldo actual** en MXN
+- **Historial de cobros** — un registro por cada envío exitoso
+- **Historial de recargas** — todos tus top-ups
+
+## Recargar saldo
+
+Desde el dashboard:
+
+1. Ve a **Mi cuenta → Saldo**
+2. Haz clic en **Recargar**
+3. Elige el monto y completa el pago con Mercado Pago
+4. El saldo se acredita automáticamente al confirmarse el pago
+
+## Auto-recarga
+
+Puedes configurar una auto-recarga automática:
+
+1. Ve a **Mi cuenta → Guardar tarjeta** (`/app/me/save-card`)
+2. Configura el **saldo mínimo** (threshold) — cuando tu saldo baja de este monto, se dispara la recarga automáticamente
+3. Configura el **monto de recarga**
+
+## Reportes CSV
+
+Desde **Mis reportes** (`/app/me/reports`) puedes descargar:
+
+- **Eventos** — historial de todos los envíos con status y canal
+- **Cobros** — detalle por envío con precio unitario
+- **Recargas** — historial de pagos y montos
+
+Útil para conciliación contable.
+
+## Saldo insuficiente
+
+Si tu saldo es insuficiente al momento del envío, el job quedará en `failed` con error `insufficient balance`. Recarga tu saldo y reintenta el job desde el dashboard.

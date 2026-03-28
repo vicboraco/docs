@@ -1,0 +1,96 @@
+---
+title: "Status de Job"
+description: "GET /v1/jobs/{job_id} — Consulta el resultado de un envío asíncrono."
+---
+
+## Endpoint
+
+```
+GET /v1/jobs/{job_id}
+```
+
+## Headers
+
+| Header | Valor |
+|--------|-------|
+| `X-API-Key` | Tu API key |
+
+## Parámetros de ruta
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `job_id` | string (UUID) | El `job_id` retornado al crear el envío |
+
+## Ejemplo
+
+```bash
+curl https://comms.panzo.mx/v1/jobs/c3d4e5f6-a1b2-4321-beef-000000000001 \
+  -H "X-API-Key: TU_API_KEY"
+```
+
+## Respuestas
+
+### Job exitoso
+
+```json
+{
+  "job_id": "c3d4e5f6-a1b2-4321-beef-000000000001",
+  "status": "success",
+  "result": {}
+}
+```
+
+Para Apple Wallet, `result` incluye el pase:
+
+```json
+{
+  "status": "success",
+  "result": { "pkpass_base64": "UEsDB..." }
+}
+```
+
+Para Google Wallet:
+
+```json
+{
+  "status": "success",
+  "result": { "save_link": "https://pay.google.com/gp/v/save/..." }
+}
+```
+
+### Job fallido
+
+```json
+{
+  "job_id": "c3d4e5f6-a1b2-4321-beef-000000000001",
+  "status": "failed",
+  "result": {
+    "error": "dial tcp 127.0.0.1:25: connect: connection refused"
+  }
+}
+```
+
+### Job en progreso
+
+```json
+{
+  "job_id": "c3d4e5f6-a1b2-4321-beef-000000000001",
+  "status": "pending"
+}
+```
+
+## Ciclo de vida
+
+```
+pending → running → success
+                 → failed
+```
+
+Consulta [Jobs asíncronos](/guides/jobs) para el patrón de polling recomendado.
+
+## Errores
+
+| Código | Causa |
+|--------|-------|
+| `401` | API key inválida |
+| `404` | Job no encontrado o no pertenece a tu tenant |

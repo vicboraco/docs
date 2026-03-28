@@ -1,0 +1,83 @@
+---
+title: "Jobs asíncronos"
+description: "Todos los envíos son asíncronos. Aprende a consultar el resultado."
+---
+
+## Por qué asíncrono
+
+Los envíos de email y WhatsApp involucran llamadas a servicios externos (SMTP, Meta API) que pueden tomar tiempo o fallar temporalmente. Para no bloquearte esperando, la plataforma:
+
+1. Acepta tu request y retorna un `job_id` inmediatamente (`202 Accepted`)
+2. Procesa la entrega en background
+3. Registra el resultado en la base de datos
+
+## Ciclo de vida
+
+```
+pending → running → success
+                 → failed
+```
+
+| Status | Significado |
+|--------|-------------|
+| `pending` | En cola, aún no procesado |
+| `running` | El worker lo está procesando |
+| `success` | Entregado exitosamente |
+| `failed` | Falló — revisa `result.error` para el motivo |
+
+## Consultar un job
+
+```bash
+curl https://comms.panzo.mx/v1/jobs/{job_id} \
+  -H "X-API-Key: TU_API_KEY"
+```
+
+Respuesta exitosa:
+
+```json
+{
+  "job_id": "a1b2c3d4-e5f6-...",
+  "status": "success",
+  "result": {}
+}
+```
+
+Respuesta fallida:
+
+```json
+{
+  "job_id": "a1b2c3d4-e5f6-...",
+  "status": "failed",
+  "result": {
+    "error": "dial tcp: connection refused"
+  }
+}
+```
+
+## Reintentar un job fallido
+
+Desde el dashboard en **Mis reportes → Eventos**, puedes reintentar cualquier job con status `failed`. El sistema re-encola el job con el mismo payload original.
+
+Vía API (próximamente), también podrás reintentar programáticamente.
+
+## Polling recomendado
+
+Para implementaciones en producción, te recomendamos un backoff exponencial:
+
+```python
+import time, requests
+
+def wait_for_job(job_id, api_key, max_retries=10):
+    delay = 1
+    for _ in range(max_retries):
+        r = requests.get(
+            f"https://comms.panzo.mx/v1/jobs/{job_id}",
+            headers={"X-API-Key": api_key}
+        )
+        data = r.json()
+        if data["status"] in ("success", "failed"):
+            return data
+        time.sleep(delay)
+        delay = min(delay * 2, 30)
+    return None
+```

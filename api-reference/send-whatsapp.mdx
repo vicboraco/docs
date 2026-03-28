@@ -1,0 +1,79 @@
+---
+title: "Enviar WhatsApp"
+description: "POST /v1/send/whatsapp — Envía un template de WhatsApp Business aprobado por Meta."
+---
+
+## Endpoint
+
+```
+POST /v1/send/whatsapp
+```
+
+## Headers
+
+| Header | Valor |
+|--------|-------|
+| `X-API-Key` | Tu API key |
+| `Content-Type` | `application/json` |
+
+## Body
+
+```json
+{
+  "phone_number":  "521234567890",
+  "template_id":   "nombre_template_meta",
+  "language_code": "es",
+  "params":        ["valor1", "valor2"]
+}
+```
+
+### Campos
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `phone_number` | string | ✅ | Número en formato internacional sin `+` (ej. `521234567890`) |
+| `template_id` | string | ✅ | Nombre exacto del template aprobado en Meta Business Manager |
+| `language_code` | string | — | Código de idioma del template. Default: `es` |
+| `params` | array | — | Valores posicionales para `{{1}}`, `{{2}}`, etc. del template |
+
+## Ejemplo
+
+```bash
+curl -X POST https://comms.panzo.mx/v1/send/whatsapp \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: TU_API_KEY" \
+  -d '{
+    "phone_number":  "521234567890",
+    "template_id":   "confirmacion_reserva",
+    "language_code": "es",
+    "params":        ["Carlos Mendoza", "30 de marzo", "3:00 PM", "Sala Norte"]
+  }'
+```
+
+Si el template es:
+> "Hola {{1}}, tu reserva del {{2}} a las {{3}} en {{4}} está confirmada."
+
+El mensaje enviado sería:
+> "Hola Carlos Mendoza, tu reserva del 30 de marzo a las 3:00 PM en Sala Norte está confirmada."
+
+## Respuesta `202`
+
+```json
+{
+  "job_id": "d4e5f6a1-b2c3-...",
+  "status": "pending"
+}
+```
+
+## Errores
+
+| Código | Causa |
+|--------|-------|
+| `400` | `phone_number` o `template_id` vacíos |
+| `401` | API key inválida |
+| `403` | Canal WhatsApp no habilitado para tu tenant |
+| `500` | Error al encolar o credenciales Meta no configuradas |
+
+<Note>
+  Los templates deben estar aprobados en tu cuenta de Meta Business antes de poder enviarlos. El proceso de aprobación toma 24–48 horas.
+</Note>
