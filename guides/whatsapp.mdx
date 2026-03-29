@@ -47,7 +47,15 @@ curl -X POST https://comms.panzo.mx/v1/send/whatsapp \
 
 ## Gestionar templates
 
-Desde el dashboard admin (`/app/tenants/:id/wa-templates`) puedes registrar los templates de cada tenant con:
+### Desde el portal de tenant (`/app/me/wa-templates`)
+
+Los tenants pueden ver sus templates disponibles con el ejemplo de llamada a la API.
+
+Si el administrador habilitó **credenciales propias** (`allow_custom=true`) para el canal WhatsApp, el tenant también puede crear, editar y eliminar sus templates directamente.
+
+### Desde el panel admin (`/app/tenants/:id/wa-templates`)
+
+El administrador puede gestionar templates de cualquier tenant. Registra cada template con:
 
 - El nombre del template (debe coincidir exactamente con el aprobado en Meta)
 - El código de idioma
