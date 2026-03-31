@@ -1,0 +1,148 @@
+---
+title: "Listar Eventos"
+description: "GET /v1/events — Exporta el historial de entrega de tu tenant con paginación por cursor."
+---
+
+## Endpoint
+
+```
+GET /v1/events
+```
+
+## Headers
+
+| Header | Valor |
+|--------|-------|
+| `X-API-Key` | Tu API key |
+
+## Parámetros de consulta
+
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|-----------|-------------|
+| `from` | string (fecha) | **Sí** | Fecha inicial, formato `YYYY-MM-DD` |
+| `to` | string (fecha) | **Sí** | Fecha final, formato `YYYY-MM-DD` |
+| `channel` | string | No | Filtrar por canal: `email` o `whatsapp` |
+| `event_type` | string | No | Filtrar por tipo: `sent`, `delivered`, `read`, `opened`, `clicked`, `bounced`, `failed` |
+| `limit` | integer | No | Eventos por página. Default `100`, máximo `500` |
+| `cursor` | integer | No | Cursor de paginación (ver abajo). Omitir en la primera página |
+
+## Paginación por cursor
+
+Los resultados se ordenan de **más reciente a más antiguo**. Cada respuesta incluye
+`has_more` y `next_cursor`:
+
+```bash
+# Primera página
+curl "https://comms.panzo.mx/v1/events?from=2026-03-01&to=2026-03-31&limit=100" \
+  -H "X-API-Key: TU_API_KEY"
+```
+
+```json
+{
+  "events": [ ... ],
+  "has_more": true,
+  "next_cursor": 8500
+}
+```
+
+```bash
+# Siguiente página — pasar el next_cursor como cursor
+curl "https://comms.panzo.mx/v1/events?from=2026-03-01&to=2026-03-31&limit=100&cursor=8500" \
+  -H "X-API-Key: TU_API_KEY"
+```
+
+```json
+{
+  "events": [ ... ],
+  "has_more": false,
+  "next_cursor": 0
+}
+```
+
+Continúa hasta que `has_more` sea `false`.
+
+## Respuesta
+
+```json
+{
+  "events": [
+    {
+      "event_id": 9000,
+      "job_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "channel": "whatsapp",
+      "event_type": "delivered",
+      "result": {},
+      "created_at": "2026-03-30T10:00:05Z"
+    },
+    {
+      "event_id": 8999,
+      "job_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "channel": "whatsapp",
+      "event_type": "sent",
+      "result": {},
+      "created_at": "2026-03-30T10:00:00Z"
+    }
+  ],
+  "has_more": true,
+  "next_cursor": 8999
+}
+```
+
+## Límites y restricciones
+
+<Warning>
+  `from` y `to` son **obligatorios**. Las consultas sin rango de fechas son rechazadas.
+</Warning>
+
+| Restricción | Límite |
+|------------|--------|
+| Ventana máxima por request | **31 días** |
+| Eventos por página | **500 máximo** |
+| Rate limit (plan free) | 100 req/min |
+| Rate limit (plan pro) | 1 000 req/min |
+
+Para exportar más de 31 días, divide en múltiples llamados:
+
+```bash
+# Mes 1
+GET /v1/events?from=2026-01-01&to=2026-01-31
+
+# Mes 2
+GET /v1/events?from=2026-02-01&to=2026-02-28
+```
+
+## Errores
+
+| Código | Causa |
+|--------|-------|
+| `400` | Falta `from` o `to`, rango mayor a 31 días, o formato de fecha inválido |
+| `401` | API key inválida |
+| `500` | Error interno |
+
+## Ejemplo: exportar todos los envíos de email de marzo
+
+```bash
+#!/bin/bash
+CURSOR=0
+PAGE=1
+
+while true; do
+  URL="https://comms.panzo.mx/v1/events?from=2026-03-01&to=2026-03-31&channel=email&limit=500"
+  if [ "$CURSOR" -gt 0 ]; then
+    URL="${URL}&cursor=${CURSOR}"
+  fi
+
+  RESPONSE=$(curl -s "$URL" -H "X-API-Key: TU_API_KEY")
+  echo "$RESPONSE" >> eventos_marzo.jsonl
+
+  HAS_MORE=$(echo "$RESPONSE" | jq -r '.has_more')
+  CURSOR=$(echo "$RESPONSE" | jq -r '.next_cursor')
+
+  echo "Página $PAGE descargada. has_more=$HAS_MORE"
+  PAGE=$((PAGE + 1))
+
+  if [ "$HAS_MORE" = "false" ]; then
+    break
+  fi
+done
+```

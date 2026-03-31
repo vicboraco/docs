@@ -1,217 +1,1268 @@
 {
-  "openapi": "3.1.0",
+  "openapi": "3.0.3",
   "info": {
-    "title": "OpenAPI Plant Store",
-    "description": "A sample API that uses a plant store as an example to demonstrate features in the OpenAPI specification",
-    "license": {
-      "name": "MIT"
-    },
-    "version": "1.0.0"
+    "title": "CommsPlatform API",
+    "version": "1.0",
+    "description": "Multi-channel communications platform. Supports transactional email,\nWhatsApp Business messaging, and Apple/Google Wallet pass generation.\n\n## Authentication\n\nAll `/v1/` endpoints require an API key passed in the `X-API-Key` header.\nEach tenant has a unique key. API keys are issued by the platform operator.\n\nAdmin endpoints (`/v1/admin/`) require a separate `X-Admin-Key` header and\nare for internal operator use only — do not expose these to end users.\n"
   },
   "servers": [
     {
-      "url": "http://sandbox.mintlify.com"
+      "url": "https://api.example.com",
+      "description": "Production (placeholder — update with final domain)"
     }
   ],
   "security": [
     {
-      "bearerAuth": []
+      "ApiKeyAuth": []
     }
   ],
   "paths": {
-    "/plants": {
+    "/health": {
       "get": {
-        "description": "Returns all plants from the system that the user has access to",
+        "summary": "Health check",
+        "description": "Returns `ok` when the gateway is running. No authentication required.",
+        "operationId": "getHealth",
+        "security": [],
+        "tags": [
+          "System"
+        ],
+        "responses": {
+          "200": {
+            "description": "Gateway is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/send/email": {
+      "post": {
+        "summary": "Send a transactional email",
+        "description": "Enqueues an email for delivery. The email is rendered from a named\nHTML template stored server-side, merged with the provided `data` object.\n\nDelivery is asynchronous — the response returns a `job_id` you can poll\nvia `GET /v1/jobs/{id}`.\n",
+        "operationId": "sendEmail",
+        "tags": [
+          "Email"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailRequest"
+              },
+              "example": {
+                "to_address": "cliente@example.com",
+                "to_name": "Juan Pérez",
+                "subject": "Bienvenido a Panzo",
+                "template_id": "welcome",
+                "data": {
+                  "Name": "Juan",
+                  "CompanyName": "Panzo"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/JobAccepted"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ChannelDisabled"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v1/send/whatsapp": {
+      "post": {
+        "summary": "Send a WhatsApp template message",
+        "description": "Sends a pre-approved WhatsApp Business template message via Meta Cloud API.\n\nThe `template_id` must match a template approved in your Meta Business account.\n`params` are the ordered variable values for the template body.\n\nDelivery is asynchronous — the response returns a `job_id`.\n",
+        "operationId": "sendWhatsApp",
+        "tags": [
+          "WhatsApp"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendWhatsAppRequest"
+              },
+              "example": {
+                "phone_number": "521234567890",
+                "template_id": "bienvenida_cliente",
+                "language_code": "es",
+                "params": [
+                  "Juan",
+                  "31 de marzo"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/JobAccepted"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ChannelDisabled"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/webhook/whatsapp": {
+      "post": {
+        "summary": "WhatsApp incoming webhook",
+        "description": "Meta Cloud API sends inbound messages and status updates to this endpoint.\nSignature verification is performed via `X-Hub-Signature-256` when\n`META_WEBHOOK_SECRET` is configured.\n\nThis endpoint is called by Meta, not by your application.\n",
+        "operationId": "whatsappWebhook",
+        "security": [],
+        "tags": [
+          "WhatsApp"
+        ],
         "parameters": [
           {
-            "name": "limit",
-            "in": "query",
-            "description": "The maximum number of results to return",
+            "in": "header",
+            "name": "X-Hub-Signature-256",
             "schema": {
-              "type": "integer",
-              "format": "int32"
+              "type": "string"
+            },
+            "description": "HMAC-SHA256 signature from Meta for payload verification"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Meta webhook payload (variable structure)"
+              }
             }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Acknowledged"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/v1/passes/create": {
+      "post": {
+        "summary": "Generate a wallet pass",
+        "description": "Generates an Apple PKPass or Google Wallet save link.\n\nFor `pass_type: apple`, the response job result contains a `pkpass_base64`\nfield with the base64-encoded `.pkpass` file.\n\nFor `pass_type: google`, the result contains a `save_link` that the\nend user opens to add the pass to their Google Wallet.\n\nDelivery is asynchronous — poll `GET /v1/jobs/{id}` for the result.\n",
+        "operationId": "createPass",
+        "tags": [
+          "Wallet"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePassRequest"
+              },
+              "examples": {
+                "apple": {
+                  "summary": "Apple PKPass",
+                  "value": {
+                    "pass_type": "apple",
+                    "pass_data": {
+                      "serial_number": "SN-001",
+                      "organization_name": "Panzo",
+                      "description": "Tarjeta de membresía",
+                      "icon_base64": ""
+                    }
+                  }
+                },
+                "google": {
+                  "summary": "Google Wallet",
+                  "value": {
+                    "pass_type": "google",
+                    "pass_data": {
+                      "class_id": "issuer.panzo_membership",
+                      "object_id": "issuer.panzo_membership_001",
+                      "object_data": {
+                        "id": "issuer.panzo_membership_001",
+                        "classId": "issuer.panzo_membership",
+                        "genericType": "GENERIC_TYPE_UNSPECIFIED",
+                        "cardTitle": {
+                          "defaultValue": {
+                            "language": "es",
+                            "value": "Panzo Membresía"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/JobAccepted"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ChannelDisabled"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v1/jobs/{id}": {
+      "get": {
+        "summary": "Get job status",
+        "description": "Returns the current status of an async job.\n\n`status` values:\n- `pending` — queued, not yet picked up\n- `running` — worker is processing it\n- `success` — delivered successfully; check `result` for delivery details\n- `failed` — delivery failed; check `result.error` for the reason\n",
+        "operationId": "getJob",
+        "tags": [
+          "Jobs"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Job ID returned by a send/create endpoint"
           }
         ],
         "responses": {
           "200": {
-            "description": "Plant response",
+            "description": "Job found",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Plant"
+                  "$ref": "#/components/schemas/Job"
+                },
+                "examples": {
+                  "success_email": {
+                    "summary": "Delivered email",
+                    "value": {
+                      "job_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      "type": "email",
+                      "status": "success",
+                      "result": {
+                        "delivered_to": "cliente@example.com"
+                      },
+                      "created_at": "2026-03-27T13:00:00Z",
+                      "updated_at": "2026-03-27T13:00:01Z"
+                    }
+                  },
+                  "failed": {
+                    "summary": "Failed job",
+                    "value": {
+                      "job_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      "type": "whatsapp",
+                      "status": "failed",
+                      "result": {
+                        "error": "Meta API error: invalid phone number"
+                      },
+                      "created_at": "2026-03-27T13:00:00Z",
+                      "updated_at": "2026-03-27T13:00:02Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v1/jobs/{id}/events": {
+      "get": {
+        "summary": "Get delivery events for a job",
+        "description": "Returns all delivery status events for a single job, in chronological order.\n\nA job produces events as it progresses through the delivery pipeline.\nFor example, a WhatsApp message generates `sent` when dispatched to Meta,\nthen `delivered` when Meta confirms the handset received it, and `read` when\nthe recipient opens the conversation.\n\nFor email, events include `sent`, `opened` (tracking pixel), `clicked` (link\nrewrite), and `bounced` (Postfix bounce pipe).\n\nA typical job has 1–5 events. No pagination is needed.\n",
+        "operationId": "getJobEvents",
+        "tags": [
+          "Events"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Job ID returned by a send/create endpoint"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery events for the job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DeliveryEvent"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "job_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "events": [
+                    {
+                      "event_id": 1001,
+                      "event_type": "sent",
+                      "result": {},
+                      "created_at": "2026-03-30T10:00:00Z"
+                    },
+                    {
+                      "event_id": 1002,
+                      "event_type": "delivered",
+                      "result": {},
+                      "created_at": "2026-03-30T10:00:05Z"
+                    },
+                    {
+                      "event_id": 1003,
+                      "event_type": "read",
+                      "result": {},
+                      "created_at": "2026-03-30T10:01:12Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v1/events": {
+      "get": {
+        "summary": "List delivery events (paginated)",
+        "description": "Returns a cursor-paginated list of delivery events for your tenant.\n\n### Pagination\n\nResults are ordered newest-first by internal ID. Each response includes\n`has_more` and `next_cursor`:\n\n```\nGET /v1/events?from=2026-03-01&to=2026-03-31&limit=100\n→ { events: [...100 items...], has_more: true, next_cursor: 8500 }\n\nGET /v1/events?from=2026-03-01&to=2026-03-31&limit=100&cursor=8500\n→ { events: [...next 100...], has_more: false, next_cursor: 0 }\n```\n\nIterate until `has_more: false` to export a full date range.\n\n### Rate limits & safeguards\n\n- `from` and `to` are **required** — open-ended queries are not allowed.\n- Maximum date range: **31 days** per request. Split larger ranges into multiple calls.\n- Maximum `limit`: **500** per page (silently clamped if exceeded).\n- Subject to the standard per-tenant rate limit (100 req/min free, 1 000 req/min pro).\n",
+        "operationId": "listEvents",
+        "tags": [
+          "Events"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Start date (inclusive), format `2006-01-02`",
+            "example": "2026-03-01"
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "End date (inclusive), format `2006-01-02`. Max 31 days from `from`.",
+            "example": "2026-03-31"
+          },
+          {
+            "in": "query",
+            "name": "channel",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "email",
+                "whatsapp"
+              ]
+            },
+            "description": "Filter by channel. Omit to return all channels."
+          },
+          {
+            "in": "query",
+            "name": "event_type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "sent",
+                "delivered",
+                "read",
+                "opened",
+                "clicked",
+                "bounced",
+                "failed"
+              ]
+            },
+            "description": "Filter by event type. Omit to return all types."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            },
+            "description": "Number of events per page. Clamped to 500 if higher."
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Pagination cursor — pass the `next_cursor` value from the previous response.\nOmit or set to `0` for the first page.\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventsListResponse"
+                },
+                "examples": {
+                  "first_page": {
+                    "summary": "First page with more results",
+                    "value": {
+                      "events": [
+                        {
+                          "event_id": 9000,
+                          "job_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                          "channel": "whatsapp",
+                          "event_type": "delivered",
+                          "result": {},
+                          "created_at": "2026-03-30T10:00:05Z"
+                        }
+                      ],
+                      "has_more": true,
+                      "next_cursor": 8999
+                    }
+                  },
+                  "last_page": {
+                    "summary": "Last page",
+                    "value": {
+                      "events": [
+                        {
+                          "event_id": 100,
+                          "job_id": "aabbccdd-0000-1111-2222-333344445555",
+                          "channel": "email",
+                          "event_type": "opened",
+                          "result": {},
+                          "created_at": "2026-03-01T08:30:00Z"
+                        }
+                      ],
+                      "has_more": false,
+                      "next_cursor": 0
+                    }
                   }
                 }
               }
             }
           },
           "400": {
-            "description": "Unexpected error",
+            "description": "Bad request. Possible causes:\n- `from` or `to` is missing\n- Date range exceeds 31 days\n- Invalid date format\n",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "description": "Creates a new plant in the store",
-        "requestBody": {
-          "description": "Plant to add to the store",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewPlant"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "plant response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Plant"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
-          "400": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
           }
         }
       }
     },
-    "/plants/{id}": {
-      "delete": {
-        "description": "Deletes a single plant based on the ID supplied",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "ID of plant to delete",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
+    "/v1/tenant/config": {
+      "get": {
+        "summary": "Get tenant channel configuration",
+        "description": "Returns the current channel credentials configured for your tenant.\n\nNote: channel availability is controlled by the platform operator. If a channel\nis not enabled for your tenant, calling the corresponding `/v1/send/*` endpoint\nwill return `403 channel not enabled for this tenant`.\n",
+        "operationId": "getTenantConfig",
+        "tags": [
+          "Tenant"
         ],
         "responses": {
-          "204": {
-            "description": "Plant deleted",
-            "content": {}
-          },
-          "400": {
-            "description": "unexpected error",
+          "200": {
+            "description": "Current config (empty object if nothing configured)",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/TenantConfig"
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
           }
         }
-      }
-    }
-  },
-  "webhooks": {
-    "/plant/webhook": {
-      "post": {
-        "description": "Information about a new plant added to the store",
+      },
+      "put": {
+        "summary": "Update tenant channel configuration",
+        "description": "Merges the provided configuration into your tenant's existing config.\nOnly the channels you include in the request body are updated — other\nchannels are left unchanged.\n\nTo remove a channel's config, set it to `null`:\n```json\n{ \"whatsapp\": null }\n```\n",
+        "operationId": "putTenantConfig",
+        "tags": [
+          "Tenant"
+        ],
         "requestBody": {
-          "description": "Plant added to the store",
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NewPlant"
+                "$ref": "#/components/schemas/TenantConfig"
+              },
+              "examples": {
+                "email": {
+                  "summary": "Configure email sending domain",
+                  "value": {
+                    "email": {
+                      "from_domain": "panzo.mx",
+                      "from_name": "Panzo"
+                    }
+                  }
+                },
+                "whatsapp": {
+                  "summary": "Configure WhatsApp credentials",
+                  "value": {
+                    "whatsapp": {
+                      "phone_number_id": "1017915694740900",
+                      "access_token": "EAANpv..."
+                    }
+                  }
+                }
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Return a 200 status to indicate that the data was received successfully"
+            "description": "Updated config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v1/admin/tenants": {
+      "get": {
+        "summary": "[Admin] List all tenants",
+        "description": "Returns all tenants with their API keys. Requires `X-Admin-Key`.",
+        "operationId": "adminListTenants",
+        "security": [
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "tags": [
+          "Admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of tenants",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantRecord"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "summary": "[Admin] Create a tenant",
+        "description": "Creates a new tenant and generates a `sk_live_...` API key.\nThe API key is only returned once — store it securely.\nRequires `X-Admin-Key`.\n",
+        "operationId": "adminCreateTenant",
+        "security": [
+          {
+            "AdminKeyAuth": []
+          }
+        ],
+        "tags": [
+          "Admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantRequest"
+              },
+              "example": {
+                "tenant_id": "acme-corp",
+                "plan_tier": "pro"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
           }
         }
       }
     }
   },
   "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "Tenant API key (`sk_live_...`)"
+      },
+      "AdminKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Admin-Key",
+        "description": "Internal operator key — do not expose to tenants"
+      }
+    },
     "schemas": {
-      "Plant": {
-        "required": [
-          "name"
-        ],
+      "SendEmailRequest": {
         "type": "object",
+        "required": [
+          "to_address",
+          "template_id"
+        ],
         "properties": {
-          "name": {
-            "description": "The name of the plant",
-            "type": "string"
+          "to_address": {
+            "type": "string",
+            "format": "email",
+            "description": "Recipient email address"
           },
-          "tag": {
-            "description": "Tag to specify the type",
-            "type": "string"
+          "to_name": {
+            "type": "string",
+            "description": "Recipient display name (used in the email header)"
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line. Overrides the template's default subject.\nSupports template variables: `Hola {{.nombre}}`.\n"
+          },
+          "template_id": {
+            "type": "string",
+            "description": "Name of the server-side HTML template to render",
+            "example": "welcome"
+          },
+          "data": {
+            "type": "object",
+            "description": "Key-value pairs injected into the template using Go template syntax.\nIn the HTML body and subject line, use `{{.keyName}}` to reference each key.\n\nExample: `{\"nombre\": \"Victor\", \"empresa\": \"Panzo\"}` renders\n`<p>Hola {{.nombre}}, bienvenido a {{.empresa}}</p>` as\n`<p>Hola Victor, bienvenido a Panzo</p>`.\n\nDeclare variables in the dashboard email editor's \"Variables\" panel\nto make them available as Merge Tags in the Unlayer design UI.\n",
+            "additionalProperties": true,
+            "example": {
+              "nombre": "Victor",
+              "empresa": "Panzo"
+            }
           }
         }
       },
-      "NewPlant": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/Plant"
+      "SendWhatsAppRequest": {
+        "type": "object",
+        "required": [
+          "phone_number",
+          "template_id"
+        ],
+        "properties": {
+          "phone_number": {
+            "type": "string",
+            "description": "Recipient phone number with country code, no `+` prefix",
+            "example": "521234567890"
           },
-          {
-            "required": [
-              "id"
+          "template_id": {
+            "type": "string",
+            "description": "Name of the approved WhatsApp Business template",
+            "example": "bienvenida_cliente"
+          },
+          "language_code": {
+            "type": "string",
+            "description": "BCP-47 language code for the template. Defaults to `es`.",
+            "default": "es",
+            "example": "es"
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ordered variable values for the template body.\nIndex 0 maps to `{{1}}` in Meta's template, index 1 to `{{2}}`, etc.\nDocument expected parameters per template in the dashboard WA Templates page.\n",
+            "example": [
+              "Victor",
+              "2026-03-27"
+            ]
+          }
+        }
+      },
+      "CreatePassRequest": {
+        "type": "object",
+        "required": [
+          "pass_type",
+          "pass_data"
+        ],
+        "properties": {
+          "pass_type": {
+            "type": "string",
+            "enum": [
+              "apple",
+              "google"
             ],
-            "type": "object",
-            "properties": {
-              "id": {
-                "description": "Identification number of the plant",
-                "type": "integer",
-                "format": "int64"
+            "description": "Which wallet platform to generate for"
+          },
+          "pass_data": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ApplePassData"
+              },
+              {
+                "$ref": "#/components/schemas/GooglePassData"
               }
+            ],
+            "discriminator": {
+              "propertyName": "pass_type"
             }
           }
-        ]
+        }
       },
-      "Error": {
+      "ApplePassData": {
+        "type": "object",
         "required": [
-          "error",
-          "message"
+          "serial_number",
+          "organization_name",
+          "description"
         ],
+        "properties": {
+          "serial_number": {
+            "type": "string",
+            "description": "Unique identifier for this pass instance"
+          },
+          "organization_name": {
+            "type": "string",
+            "description": "Name displayed on the pass"
+          },
+          "description": {
+            "type": "string",
+            "description": "Short description of the pass"
+          },
+          "icon_base64": {
+            "type": "string",
+            "description": "Base64-encoded PNG icon image. Uses a placeholder if omitted."
+          }
+        }
+      },
+      "GooglePassData": {
+        "type": "object",
+        "required": [
+          "class_id",
+          "object_id",
+          "object_data"
+        ],
+        "properties": {
+          "class_id": {
+            "type": "string",
+            "description": "Google Wallet pass class identifier"
+          },
+          "object_id": {
+            "type": "string",
+            "description": "Unique Google Wallet object identifier"
+          },
+          "object_data": {
+            "type": "object",
+            "description": "Full Google Wallet generic object payload",
+            "additionalProperties": true
+          }
+        }
+      },
+      "CreateTenantRequest": {
+        "type": "object",
+        "required": [
+          "tenant_id"
+        ],
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Unique identifier for the tenant (slug format recommended)",
+            "example": "acme-corp"
+          },
+          "plan_tier": {
+            "type": "string",
+            "enum": [
+              "free",
+              "pro"
+            ],
+            "default": "free",
+            "description": "Rate limit tier.\n- `free`: 100 requests/minute\n- `pro`: 1000 requests/minute\n"
+          }
+        }
+      },
+      "JobAccepted": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Use this to poll `GET /v1/jobs/{id}`"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ]
+          }
+        }
+      },
+      "Job": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "email",
+              "whatsapp",
+              "wallet"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "success",
+              "failed"
+            ]
+          },
+          "result": {
+            "type": "object",
+            "nullable": true,
+            "description": "Present when status is `success` or `failed`.\n- Email success: `{\"delivered_to\": \"addr@example.com\"}`\n- WhatsApp success: `{\"delivered_to\": \"+521234567890\"}`\n- Apple Wallet success: `{\"pkpass_base64\": \"...\"}`\n- Google Wallet success: `{\"save_link\": \"https://pay.google.com/...\"}`\n- Any failure: `{\"error\": \"reason\"}`\n",
+            "additionalProperties": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TenantConfig": {
+        "type": "object",
+        "description": "Per-channel credentials. Omit a channel to leave it unchanged.",
+        "properties": {
+          "email": {
+            "$ref": "#/components/schemas/EmailChannelConfig",
+            "nullable": true
+          },
+          "whatsapp": {
+            "$ref": "#/components/schemas/WAChannelConfig",
+            "nullable": true
+          },
+          "apple_wallet": {
+            "$ref": "#/components/schemas/AppleChannelConfig",
+            "nullable": true
+          },
+          "google_wallet": {
+            "$ref": "#/components/schemas/GoogleChannelConfig",
+            "nullable": true
+          }
+        }
+      },
+      "EmailChannelConfig": {
+        "type": "object",
+        "required": [
+          "from_domain"
+        ],
+        "properties": {
+          "smtp_addr": {
+            "type": "string",
+            "description": "SMTP relay address. Defaults to platform relay if omitted.",
+            "example": "localhost:25"
+          },
+          "from_domain": {
+            "type": "string",
+            "description": "Domain used in the `From` address (`noreply@{from_domain}`)",
+            "example": "panzo.mx"
+          },
+          "from_name": {
+            "type": "string",
+            "description": "Display name in the `From` header",
+            "example": "Panzo"
+          }
+        }
+      },
+      "WAChannelConfig": {
+        "type": "object",
+        "required": [
+          "phone_number_id",
+          "access_token"
+        ],
+        "properties": {
+          "phone_number_id": {
+            "type": "string",
+            "description": "Meta Cloud API phone number ID"
+          },
+          "access_token": {
+            "type": "string",
+            "description": "Meta permanent access token"
+          }
+        }
+      },
+      "AppleChannelConfig": {
+        "type": "object",
+        "required": [
+          "p12_base64",
+          "p12_password",
+          "pass_type_id",
+          "team_id"
+        ],
+        "properties": {
+          "p12_base64": {
+            "type": "string",
+            "description": "Base64-encoded Apple `.p12` signing certificate"
+          },
+          "p12_password": {
+            "type": "string",
+            "description": "Password for the `.p12` certificate"
+          },
+          "pass_type_id": {
+            "type": "string",
+            "description": "Apple Pass Type ID (e.g. `pass.com.example.membership`)"
+          },
+          "team_id": {
+            "type": "string",
+            "description": "Apple Developer Team ID"
+          }
+        }
+      },
+      "GoogleChannelConfig": {
+        "type": "object",
+        "required": [
+          "service_account_json",
+          "issuer_id"
+        ],
+        "properties": {
+          "service_account_json": {
+            "type": "string",
+            "description": "Full contents of the Google Service Account JSON key file"
+          },
+          "issuer_id": {
+            "type": "string",
+            "description": "Google Wallet Issuer ID"
+          }
+        }
+      },
+      "TenantRecord": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string"
+          },
+          "api_key": {
+            "type": "string",
+            "description": "Full API key — only returned at creation time for new tenants"
+          },
+          "plan_tier": {
+            "type": "string",
+            "enum": [
+              "free",
+              "pro"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DeliveryEvent": {
+        "type": "object",
+        "description": "A single delivery status event for a job.",
+        "properties": {
+          "event_id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Monotonically increasing ID (used as cursor for pagination)"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "delivered",
+              "read",
+              "opened",
+              "clicked",
+              "bounced",
+              "failed"
+            ],
+            "description": "Delivery stage:\n- `sent` — dispatched to the channel provider\n- `delivered` — confirmed received by the handset (WhatsApp only)\n- `read` — recipient opened the message (WhatsApp only)\n- `opened` — tracking pixel fired (Email only)\n- `clicked` — recipient clicked a tracked link (Email only)\n- `bounced` — hard bounce returned by Postfix (Email only)\n- `failed` — delivery error at any stage\n"
+          },
+          "result": {
+            "type": "object",
+            "nullable": true,
+            "description": "Provider-specific metadata. May be empty (`{}`).",
+            "additionalProperties": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "EventsListResponse": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryEvent"
+            },
+            "description": "Events for this page, ordered newest-first."
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "True if there are more pages to fetch."
+          },
+          "next_cursor": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Pass this as the `cursor` param in the next request.\n`0` when `has_more` is false.\n"
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        }
+      },
+      "ErrorResponse": {
         "type": "object",
         "properties": {
           "error": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "message": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable error message"
           }
         }
       }
     },
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer"
+    "responses": {
+      "JobAccepted": {
+        "description": "Job enqueued successfully",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/JobAccepted"
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Invalid request body or missing required fields",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Missing or invalid API key",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "unauthorized"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "job not found"
+            }
+          }
+        }
+      },
+      "ChannelDisabled": {
+        "description": "Channel not enabled for this tenant",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "channel not enabled for this tenant"
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Unexpected server error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "internal error"
+            }
+          }
+        }
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Email",
+      "description": "Transactional email via SMTP/Postfix"
+    },
+    {
+      "name": "WhatsApp",
+      "description": "WhatsApp Business messaging via Meta Cloud API"
+    },
+    {
+      "name": "Wallet",
+      "description": "Apple PKPass and Google Wallet pass generation"
+    },
+    {
+      "name": "Jobs",
+      "description": "Async job status polling"
+    },
+    {
+      "name": "Events",
+      "description": "Delivery event history — per-job and paginated bulk listing"
+    },
+    {
+      "name": "Tenant",
+      "description": "Per-tenant channel configuration"
+    },
+    {
+      "name": "Admin",
+      "description": "Internal operator endpoints — not for tenant use"
+    },
+    {
+      "name": "System"
+    }
+  ]
 }

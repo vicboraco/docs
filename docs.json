@@ -63,6 +63,13 @@
             ]
           },
           {
+            "group": "Eventos",
+            "pages": [
+              "api-reference/job-events",
+              "api-reference/list-events"
+            ]
+          },
+          {
             "group": "Webhooks",
             "pages": [
               "api-reference/webhook-whatsapp"
