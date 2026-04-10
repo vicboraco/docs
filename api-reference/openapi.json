@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "CommsPlatform API",
+    "title": "Axelo API",
     "version": "1.0",
     "description": "Multi-channel communications platform. Supports transactional email,\nWhatsApp Business messaging, and Apple/Google Wallet pass generation.\n\n## Authentication\n\nAll `/v1/` endpoints require an API key passed in the `X-API-Key` header.\nEach tenant has a unique key. API keys are issued by the platform operator.\n\nAdmin endpoints (`/v1/admin/`) require a separate `X-Admin-Key` header and\nare for internal operator use only — do not expose these to end users.\n"
   },
