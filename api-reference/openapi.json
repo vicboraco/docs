@@ -245,6 +245,111 @@
         }
       }
     },
+    "/v1/passes/{pass_id}": {
+      "put": {
+        "summary": "Update an existing pass",
+        "description": "Merges new `pass_data` into the existing pass, re-signs the Apple .pkpass\n(bumping version), and sends push notification to registered devices.\nFor Google passes, patches the object via REST API.\n",
+        "operationId": "updatePass",
+        "tags": [
+          "Wallet"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pass_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pass_data": {
+                    "type": "object",
+                    "description": "Fields to merge into the existing pass"
+                  },
+                  "images": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Image overrides (key→base64)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Update enqueued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pass_id": {
+                      "type": "string"
+                    },
+                    "job_id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v1/passes/{pass_id}/download": {
+      "get": {
+        "summary": "Download a pass",
+        "description": "For Apple passes, returns the `.pkpass` file with Content-Type `application/vnd.apple.pkpass`.\nFor Google passes, redirects (302) to the save link.\n",
+        "operationId": "downloadPass",
+        "tags": [
+          "Wallet"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pass_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PKPass file (Apple)",
+            "content": {
+              "application/vnd.apple.pkpass": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "302": {
+            "description": "Redirect to Google save link"
+          }
+        }
+      }
+    },
     "/v1/jobs/{id}": {
       "get": {
         "summary": "Get job status",

@@ -1,102 +1,175 @@
 ---
-title: "Emitir Wallet Pass"
-description: "POST /v1/send/wallet — Genera un pase de Apple Wallet o Google Wallet."
+title: "Wallet Passes"
+description: "Crear, actualizar y descargar pases de Apple Wallet y Google Wallet."
 ---
 
-## Endpoint
+## Crear pase
 
 ```
-POST /v1/send/wallet
+POST /v1/passes/create
 ```
 
-## Headers
+### Headers
 
 | Header | Valor |
 |--------|-------|
 | `X-API-Key` | Tu API key |
 | `Content-Type` | `application/json` |
 
-## Apple Wallet
-
-### Body
+### Apple Wallet — Event Ticket con QR
 
 ```json
 {
   "pass_type": "apple",
   "pass_data": {
-    "serial_number":     "SN-001",
+    "serial_number": "EVT-2026-001",
     "organization_name": "Mi Empresa",
-    "description":       "Membresía Premium",
-    "icon_base64":       ""
+    "description": "Entrada al evento",
+    "style": "eventTicket",
+    "background_color": "rgb(30, 60, 120)",
+    "foreground_color": "rgb(255, 255, 255)",
+    "label_color": "rgb(200, 200, 255)",
+    "logo_text": "Mi Empresa",
+    "barcodes": [{
+      "message": "EVT-2026-001",
+      "format": "PKBarcodeFormatQR",
+      "messageEncoding": "iso-8859-1"
+    }],
+    "header_fields": [
+      {"key": "date", "label": "FECHA", "value": "15 Mayo 2026"}
+    ],
+    "primary_fields": [
+      {"key": "event", "label": "EVENTO", "value": "Torneo MX Open"}
+    ],
+    "secondary_fields": [
+      {"key": "loc", "label": "LUGAR", "value": "Club Deportivo"},
+      {"key": "time", "label": "HORA", "value": "10:00 AM"}
+    ],
+    "icon_base64": "iVBORw0KGgo..."
   }
 }
 ```
 
-### Campos de `pass_data`
+### Campos de `pass_data` (Apple)
 
-| Campo | Tipo | Requerido | Descripción |
-|-------|------|-----------|-------------|
-| `serial_number` | string | ✅ | Identificador único del pase |
-| `organization_name` | string | ✅ | Nombre de la organización que aparece en el pase |
-| `description` | string | ✅ | Descripción del pase |
-| `icon_base64` | string | — | Ícono PNG en base64. Si está vacío, usa un placeholder 1×1 |
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `serial_number` | string | **Requerido.** Identificador único del pase |
+| `organization_name` | string | **Requerido.** Nombre de la organización |
+| `description` | string | **Requerido.** Descripción del pase |
+| `style` | string | `eventTicket`, `boardingPass`, `coupon`, `storeCard`, `generic` (default) |
+| `background_color` | string | Color de fondo CSS, e.g. `"rgb(30, 60, 120)"` |
+| `foreground_color` | string | Color de texto |
+| `label_color` | string | Color de labels |
+| `logo_text` | string | Texto junto al logo |
+| `barcodes` | array | Barcodes: `PKBarcodeFormatQR`, `PKBarcodeFormatPDF417`, `PKBarcodeFormatAztec`, `PKBarcodeFormatCode128` |
+| `header_fields` | array | Campos en la parte superior |
+| `primary_fields` | array | Campos principales (grandes) |
+| `secondary_fields` | array | Campos secundarios |
+| `auxiliary_fields` | array | Campos auxiliares |
+| `back_fields` | array | Campos en el reverso del pase |
+| `icon_base64` | string | PNG en base64 (usa placeholder si vacío) |
+| `logo_base64` | string | Logo PNG en base64 |
+| `strip_base64` | string | Strip image PNG en base64 |
+| `thumbnail_base64` | string | Thumbnail PNG en base64 |
+| `relevant_date` | string | Fecha W3C para relevancia |
+| `expiration_date` | string | Fecha de expiración W3C |
+| `locations` | array | `[{"latitude": 19.43, "longitude": -99.13, "relevantText": "Cerca del evento"}]` |
 
-### Respuesta
+### Respuesta (202)
 
 ```json
 {
-  "job_id": "...",
+  "job_id": "623f7796-...",
+  "status": "pending"
+}
+```
+
+Consulta `GET /v1/jobs/{job_id}` para obtener el resultado:
+
+```json
+{
   "status": "success",
   "result": {
+    "pass_id": "b4eb23fa-...",
     "pkpass_base64": "UEsDBBQAAA..."
   }
 }
 ```
 
-Sirve el archivo decodificado con `Content-Type: application/vnd.apple.pkpass`.
+### Descarga directa
+
+```
+GET /v1/passes/{pass_id}/download
+```
+
+Devuelve el `.pkpass` con `Content-Type: application/vnd.apple.pkpass`.
 
 ---
 
-## Google Wallet
-
-### Body
+### Google Wallet
 
 ```json
 {
   "pass_type": "google",
   "pass_data": {
-    "class_id":    "3388000000012345678.membresiaGold",
-    "object_id":   "3388000000012345678.usuario-001",
+    "class_id": "3388000000012345678.membresiaGold",
+    "object_id": "3388000000012345678.usuario-001",
     "object_data": {
-      "id":      "3388000000012345678.usuario-001",
+      "id": "3388000000012345678.usuario-001",
       "classId": "3388000000012345678.membresiaGold",
-      "state":   "ACTIVE"
+      "state": "ACTIVE",
+      "cardTitle": {"defaultValue": {"language": "es", "value": "Mi Empresa"}},
+      "header": {"defaultValue": {"language": "es", "value": "Membresía Gold"}}
     }
   }
 }
 ```
 
-### Campos de `pass_data`
-
-| Campo | Tipo | Requerido | Descripción |
-|-------|------|-----------|-------------|
-| `class_id` | string | ✅ | `issuer_id.nombre_clase` |
-| `object_id` | string | ✅ | `issuer_id.id_unico_objeto` |
-| `object_data` | object | ✅ | Payload del Generic Object (ver [documentación Google](https://developers.google.com/wallet/generic/rest/v1/genericobject)) |
-
-### Respuesta
+Resultado:
 
 ```json
 {
-  "job_id": "...",
   "status": "success",
   "result": {
+    "pass_id": "...",
     "save_link": "https://pay.google.com/gp/v/save/<jwt>"
   }
 }
 ```
 
-Comparte el `save_link` con el usuario para que lo agregue a Google Wallet.
+---
+
+## Actualizar pase
+
+```
+PUT /v1/passes/{pass_id}
+```
+
+Actualiza un pase existente. Mergea los campos nuevos sobre los existentes, re-firma el .pkpass, y envía push notification a dispositivos registrados.
+
+```json
+{
+  "pass_data": {
+    "primary_fields": [
+      {"key": "event", "label": "EVENTO", "value": "Torneo MX Open — APLAZADO"}
+    ],
+    "relevant_date": "2026-06-01T10:00:00-06:00"
+  }
+}
+```
+
+### Respuesta (202)
+
+```json
+{
+  "pass_id": "b4eb23fa-...",
+  "job_id": "...",
+  "status": "updating"
+}
+```
+
+---
 
 ## Errores
 
@@ -104,5 +177,6 @@ Comparte el `save_link` con el usuario para que lo agregue a Google Wallet.
 |--------|-------|
 | `400` | `pass_type` inválido o `pass_data` faltante |
 | `401` | API key inválida |
+| `402` | Saldo insuficiente (1 token por pase) |
 | `403` | Canal wallet no habilitado para tu tenant |
-| `500` | Certificado Apple/.p12 o Service Account Google no configurados |
+| `404` | Pase no encontrado |
