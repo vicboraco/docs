@@ -76,6 +76,29 @@ POST /v1/passes/create
 | `expiration_date` | string | Fecha de expiración W3C |
 | `locations` | array | `[{"latitude": 19.43, "longitude": -99.13, "relevantText": "Cerca del evento"}]` |
 
+### Crear pase desde template
+
+Si tienes un template configurado, solo necesitas `template_id` + los overrides:
+
+```json
+{
+  "template_id": "entrada-torneo",
+  "pass_data": {
+    "serial_number": "TP-2026-042",
+    "barcodes": [{"message": "TP-2026-042", "format": "PKBarcodeFormatQR", "messageEncoding": "iso-8859-1"}],
+    "header_fields": [{"key": "date", "label": "FECHA", "value": "1 Jun 2026"}],
+    "primary_fields": [{"key": "event", "label": "EVENTO", "value": "Torneo Padel Verano"}],
+    "secondary_fields": [
+      {"key": "loc", "label": "LUGAR", "value": "Club Reforma"},
+      {"key": "time", "label": "HORA", "value": "9:00 AM"}
+    ],
+    "auxiliary_fields": [{"key": "cat", "label": "CATEGORIA", "value": "Open"}]
+  }
+}
+```
+
+El `pass_type` y `style` se infieren del template. Los campos del template se mergean con los overrides (el request gana).
+
 ### Respuesta (202)
 
 ```json
