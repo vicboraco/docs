@@ -68,6 +68,34 @@ POST /v1/passes/create
 | `secondary_fields` | array | Campos secundarios |
 | `auxiliary_fields` | array | Campos auxiliares |
 | `back_fields` | array | Campos en el reverso del pase |
+
+### Estructura de campos (Apple)
+
+Cada campo en `header_fields`, `primary_fields`, `secondary_fields`, `auxiliary_fields` y `back_fields` tiene esta estructura:
+
+| Propiedad | Tipo | Descripción |
+|-----------|------|-------------|
+| `key` | string | **Requerido.** Identificador único del campo |
+| `value` | string | **Requerido.** Valor visible en el pase |
+| `label` | string | Etiqueta sobre el valor |
+| `changeMessage` | string | Mensaje de notificación al actualizar. Usa `%@` para insertar el nuevo valor |
+| `textAlignment` | string | `PKTextAlignmentLeft`, `PKTextAlignmentCenter`, `PKTextAlignmentRight` |
+
+**`changeMessage` y notificaciones push:**
+
+Para que el usuario reciba una notificación visible en la pantalla de bloqueo al actualizar un pase, el campo debe incluir `changeMessage`. Sin este atributo, el pase se actualiza silenciosamente.
+
+```json
+{
+  "key": "match",
+  "label": "PRÓXIMO PARTIDO",
+  "value": "Sáb 10:00am · Cancha 3 vs Borjas/Reyes",
+  "changeMessage": "Partido actualizado: %@"
+}
+```
+
+Cuando el valor cambia via PUT, iOS muestra un banner:
+> **Pase actualizado** — Partido actualizado: Dom 2:30pm · Cancha 5 vs García/López
 | `icon_base64` | string | PNG en base64 (usa placeholder si vacío) |
 | `logo_base64` | string | Logo PNG en base64 |
 | `strip_base64` | string | Strip image PNG en base64 |
@@ -171,13 +199,19 @@ PUT /v1/passes/{pass_id}
 
 Actualiza un pase existente. Mergea los campos nuevos sobre los existentes, re-firma el .pkpass, y envía push notification a dispositivos registrados.
 
+Acepta campos en `camelCase` (`auxiliaryFields`) o `snake_case` (`auxiliary_fields`).
+
 ```json
 {
   "pass_data": {
-    "primary_fields": [
-      {"key": "event", "label": "EVENTO", "value": "Torneo MX Open — APLAZADO"}
-    ],
-    "relevant_date": "2026-06-01T10:00:00-06:00"
+    "auxiliary_fields": [
+      {
+        "key": "match",
+        "label": "PRÓXIMO PARTIDO",
+        "value": "Dom 2:30pm · Cancha 5 vs García/López",
+        "changeMessage": "Partido actualizado: %@"
+      }
+    ]
   }
 }
 ```
