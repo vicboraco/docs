@@ -228,6 +228,53 @@ Acepta campos en `camelCase` (`auxiliaryFields`) o `snake_case` (`auxiliary_fiel
 
 ---
 
+## Estado del pase
+
+```
+GET /v1/passes/{pass_id}/status
+```
+
+Consulta si un pase está instalado en el dispositivo del usuario.
+
+### Respuesta (200) — Apple Wallet
+
+```json
+{
+  "pass_id": "e39b84be-...",
+  "pass_type": "apple",
+  "version": 5,
+  "status": "active",
+  "installed_devices": 2,
+  "is_installed": true
+}
+```
+
+Apple notifica a Axelo cuando un dispositivo agrega o elimina el pase. `installed_devices` muestra cuántos dispositivos lo tienen activo.
+
+### Respuesta (200) — Google Wallet
+
+```json
+{
+  "pass_id": "a4864ef7-...",
+  "pass_type": "google",
+  "version": 3,
+  "status": "active",
+  "google_status": "ACTIVE",
+  "has_users": true,
+  "is_installed": true
+}
+```
+
+| Campo | Descripción |
+|-------|-------------|
+| `google_status` | Estado del objeto en Google: `ACTIVE`, `COMPLETED`, `EXPIRED`, `INACTIVE`, o `not_found` si fue borrado |
+| `has_users` | `true` si al menos un usuario tiene el pase guardado en Google Wallet |
+| `is_installed` | Resumen: `true` si hay evidencia de que el pase está en un dispositivo |
+
+Google no envía callbacks en tiempo real cuando un usuario borra el pase — este endpoint consulta el estado directamente a la API de Google.
+
+---
+
 ## Errores
 
 | Código | Causa |
