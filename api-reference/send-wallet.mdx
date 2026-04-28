@@ -96,10 +96,16 @@ Para que el usuario reciba una notificación visible en la pantalla de bloqueo a
 
 Cuando el valor cambia via PUT, iOS muestra un banner:
 > **Pase actualizado** — Partido actualizado: Dom 2:30pm · Cancha 5 vs García/López
-| `icon_base64` | string | PNG en base64 (usa placeholder si vacío) |
-| `logo_base64` | string | Logo PNG en base64 |
-| `strip_base64` | string | Strip image PNG en base64 |
-| `thumbnail_base64` | string | Thumbnail PNG en base64 |
+| `icon_base64` | string | Icon PNG @1x (29×29 pt) |
+| `icon_2x_base64` | string | Icon PNG @2x (58×58 px) — recomendado |
+| `icon_3x_base64` | string | Icon PNG @3x (87×87 px) |
+| `logo_base64` | string | Logo PNG @1x (160×50 pt) |
+| `logo_2x_base64` | string | Logo PNG @2x (320×100 px) — recomendado |
+| `logo_3x_base64` | string | Logo PNG @3x (480×150 px) |
+| `strip_base64` | string | Strip PNG @1x (375×144 pt) — banda de acento con info dinámica |
+| `strip_2x_base64` | string | Strip PNG @2x (750×288 px) — recomendado |
+| `strip_3x_base64` | string | Strip PNG @3x (1125×432 px) |
+| `thumbnail_base64` | string | Thumbnail PNG (90×90 pt / 180×180 @2x) |
 | `relevant_date` | string | Fecha W3C para relevancia |
 | `expiration_date` | string | Fecha de expiración W3C |
 | `locations` | array | `[{"latitude": 19.43, "longitude": -99.13, "relevantText": "Cerca del evento"}]` |
@@ -272,6 +278,51 @@ Apple notifica a Axelo cuando un dispositivo agrega o elimina el pase. `installe
 | `is_installed` | Resumen: `true` si hay evidencia de que el pase está en un dispositivo |
 
 Google no envía callbacks en tiempo real cuando un usuario borra el pase — este endpoint consulta el estado directamente a la API de Google.
+
+---
+
+## Guía de diseño
+
+### Colores del sistema
+
+| Token | Hex | Uso |
+|-------|-----|-----|
+| Navy | `#0B1F3A` | `backgroundColor` base de todos los pases |
+| Blue | `#1A56DB` | CTA, links, acento Torneos Pro default |
+| Sky | `#3B82F6` | Acento secundario, iconos |
+| White | `#FFFFFF` | `foregroundColor` y `labelColor` |
+
+### Color de acento por torneo
+
+El `labelColor` en Apple y `hexBackgroundColor` en Google se usan para el acento del torneo:
+
+| Acento | Hex | Uso típico |
+|--------|-----|------------|
+| Amber | `#F59E0B` | Torneos de verano |
+| Green | `#22C55E` | Corporativos |
+| Sky | `#3B82F6` | Series oficiales (default) |
+| Red | `#EF4444` | Premium / invitacionales |
+| Purple | `#A855F7` | Femenino / alternativos |
+
+### Strip image (Apple)
+
+La `strip.png` es la banda de acento que muestra la hora del próximo partido. Se genera dinámicamente con el accent del torneo y se re-envía en cada update:
+
+- **Dimensiones**: 375×144 @1x, 750×288 @2x, 1125×432 @3x
+- **Contenido**: fondo con gradient del accent + hora del partido + pista + rival
+- **Enviar como**: `strip_base64` (o `strip_2x_base64` para retina)
+- **Regenerar**: cada vez que cambia el próximo partido
+
+### Catálogo de push notifications
+
+| Evento | Trigger | Mensaje ejemplo |
+|--------|---------|-----------------|
+| `match.upcoming` | 30 min antes del partido | "Tu partido empieza en 30 min — Pista 4 · 09:30 · vs López" |
+| `match.result.recorded` | Organizador registra resultado | "Resultado registrado · 6-3, 6-4 — Pasas a cuartos" |
+| `player.advanced` | Jugador avanza de ronda | "¡Felicitaciones! Avanzaste a semifinales" |
+| `tournament.finished` | Final registrada | "Torneo finalizado · 2º lugar" |
+
+Para Apple, incluir `changeMessage` en los campos dinámicos. Para Google, incluir `notify_message` en el PUT.
 
 ---
 
