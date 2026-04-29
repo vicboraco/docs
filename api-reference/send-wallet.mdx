@@ -386,6 +386,50 @@ Google no envía callbacks en tiempo real cuando un usuario borra el pase — es
 
 ---
 
+## Webhook de device registration (Apple)
+
+Axelo puede notificar a tu backend cuando un usuario instala o elimina un pase de Apple Wallet.
+
+### Configuración
+
+En el dashboard admin → detalle del tenant → sección **"Wallet Webhook"**, configura la URL destino.
+
+O via API:
+```
+PUT /dash/api/tenants/{id}/wallet-webhook
+{"wallet_webhook_url": "https://api.tuapp.com/webhooks/wallet"}
+```
+
+### Payload que recibe tu webhook
+
+```json
+POST https://api.tuapp.com/webhooks/wallet
+Content-Type: application/json
+
+{
+  "action": "register",
+  "pass_id": "e3ade6ad-1bff-4161-ae48-5d18faa6f0ee",
+  "serial_number": "461911c7-86e1-40b5-9358-d2c572647f54",
+  "device_id": "de95fb1794d9857bb1eb5bcf7fd72014",
+  "tenant_id": "torneos-pro",
+  "timestamp": "2026-04-29T05:09:38Z"
+}
+```
+
+| Campo | Descripción |
+|-------|-------------|
+| `action` | `"register"` cuando el usuario agrega el pase, `"unregister"` cuando lo elimina |
+| `pass_id` | ID del pase en Axelo |
+| `serial_number` | Serial del pase en Apple Wallet |
+| `device_id` | Identificador del dispositivo (deviceLibraryIdentifier de Apple) |
+| `timestamp` | Hora UTC del evento |
+
+El webhook se dispara de forma asíncrona — no bloquea la respuesta a Apple. Si tu endpoint falla, Axelo loguea el error pero no reintenta.
+
+Solo aplica a **Apple Wallet**. Google Wallet no notifica cuando un usuario elimina un pase — usa `GET /v1/passes/{id}/status` para consultar bajo demanda.
+
+---
+
 ## Guía de diseño
 
 ### Colores del sistema
