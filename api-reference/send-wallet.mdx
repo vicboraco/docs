@@ -166,22 +166,108 @@ Devuelve el `.pkpass` con `Content-Type: application/vnd.apple.pkpass`.
 
 ### Google Wallet
 
+#### Paso 1: Crear clase (una por torneo/evento)
+
+```
+POST /v1/google/classes
+```
+
+Cada torneo o evento necesita su propia clase. Los datos de la clase (nombre, sede, fechas) se muestran en el frente de todos los pases de esa clase.
+
 ```json
 {
-  "pass_type": "google",
-  "pass_data": {
-    "class_id": "3388000000012345678.membresiaGold",
-    "object_id": "3388000000012345678.usuario-001",
-    "object_data": {
-      "id": "3388000000012345678.usuario-001",
-      "classId": "3388000000012345678.membresiaGold",
-      "state": "ACTIVE",
-      "cardTitle": {"defaultValue": {"language": "es", "value": "Mi Empresa"}},
-      "header": {"defaultValue": {"language": "es", "value": "Membresía Gold"}}
+  "class_type": "eventTicket",
+  "class_data": {
+    "id": "ISSUER_ID.torneo-slug",
+    "issuerName": "Mi Empresa",
+    "reviewStatus": "UNDER_REVIEW",
+    "eventName": {
+      "defaultValue": {"language": "es", "value": "Nombre del Torneo"}
+    },
+    "venue": {
+      "name": {"defaultValue": {"language": "es", "value": "Club / Sede"}},
+      "address": {"defaultValue": {"language": "es", "value": "Ciudad, Estado"}}
+    },
+    "dateTime": {
+      "start": "2026-06-22T09:00:00",
+      "end": "2026-06-28T22:00:00"
+    },
+    "hexBackgroundColor": "#0B1F3A",
+    "logo": {
+      "sourceUri": {"uri": "https://url-del-logo.png"}
+    },
+    "heroImage": {
+      "sourceUri": {"uri": "https://url-del-banner-1032x336.png"}
     }
   }
 }
 ```
+
+Respuesta (201):
+```json
+{"status": "created", "class_id": "ISSUER_ID.torneo-slug"}
+```
+
+#### Actualizar clase
+
+Si cambia la sede, fechas o nombre del torneo:
+
+```
+PUT /v1/google/classes/{class_id}
+```
+
+```json
+{
+  "class_type": "eventTicket",
+  "class_data": {
+    "venue": {
+      "name": {"defaultValue": {"language": "es", "value": "Nueva Sede"}}
+    }
+  }
+}
+```
+
+Todos los pases de esa clase se actualizan automáticamente.
+
+#### Consultar clase
+
+```
+GET /v1/google/classes/{class_id}?class_type=eventTicket
+```
+
+#### Paso 2: Crear pase (uno por jugador)
+
+```json
+{
+  "pass_type": "google",
+  "pass_data": {
+    "class_id": "ISSUER_ID.torneo-slug",
+    "class_type": "eventTicket",
+    "object_id": "ISSUER_ID.jugador-UUID",
+    "object_data": {
+      "id": "ISSUER_ID.jugador-UUID",
+      "classId": "ISSUER_ID.torneo-slug",
+      "state": "ACTIVE",
+      "ticketHolderName": "Nombre del Jugador",
+      "ticketType": {"defaultValue": {"language": "es", "value": "Categoría"}},
+      "ticketNumber": "BIB-0241",
+      "barcode": {"type": "QR_CODE", "value": "UUID-JUGADOR"},
+      "textModulesData": [
+        {"id": "next_match", "header": "Próximo Partido", "body": "Por definir"}
+      ]
+    }
+  }
+}
+```
+
+| Campo del objeto | Descripción |
+|-----------------|-------------|
+| `ticketHolderName` | Nombre del jugador (visible en el frente) |
+| `ticketType` | Categoría del jugador |
+| `ticketNumber` | Dorsal o ID del jugador |
+| `textModulesData` | Campos dinámicos (próximo partido, resultado, etc.) |
+
+El `eventName`, `venue` y `dateTime` del frente vienen de la **clase** (no del objeto).
 
 Resultado:
 
@@ -195,6 +281,8 @@ Resultado:
 }
 ```
 
+Importante: cada `object_id` debe ser único. Si se reutiliza un ID ya creado, Google rechaza el save link.
+
 ---
 
 ## Actualizar pase
@@ -205,12 +293,14 @@ PUT /v1/passes/{pass_id}
 
 Actualiza un pase existente. Mergea los campos nuevos sobre los existentes, re-firma el .pkpass, y envía push notification a dispositivos registrados.
 
-Acepta campos en `camelCase` (`auxiliaryFields`) o `snake_case` (`auxiliary_fields`).
+### Apple Wallet
+
+Acepta campos en `camelCase` (`auxiliaryFields`) o `snake_case` (`auxiliary_fields`). Incluir `changeMessage` para notificación visible en lock screen.
 
 ```json
 {
   "pass_data": {
-    "auxiliary_fields": [
+    "auxiliaryFields": [
       {
         "key": "match",
         "label": "PRÓXIMO PARTIDO",
@@ -218,6 +308,21 @@ Acepta campos en `camelCase` (`auxiliaryFields`) o `snake_case` (`auxiliary_fiel
         "changeMessage": "Partido actualizado: %@"
       }
     ]
+  }
+}
+```
+
+### Google Wallet
+
+Incluir `notify_message` para enviar notificación visible al usuario.
+
+```json
+{
+  "pass_data": {
+    "textModulesData": [
+      {"id": "next_match", "header": "Próximo Partido", "body": "Dom 2:30pm · Cancha 5 vs García/López"}
+    ],
+    "notify_message": "Tu próximo partido fue actualizado"
   }
 }
 ```
