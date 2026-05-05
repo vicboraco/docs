@@ -33,7 +33,7 @@ Los resultados se ordenan de **más reciente a más antiguo**. Cada respuesta in
 
 ```bash
 # Primera página
-curl "https://comms.panzo.mx/v1/events?from=2026-03-01&to=2026-03-31&limit=100" \
+curl "https://api.axelo.mx/v1/events?from=2026-03-01&to=2026-03-31&limit=100" \
   -H "X-API-Key: TU_API_KEY"
 ```
 
@@ -47,7 +47,7 @@ curl "https://comms.panzo.mx/v1/events?from=2026-03-01&to=2026-03-31&limit=100" 
 
 ```bash
 # Siguiente página — pasar el next_cursor como cursor
-curl "https://comms.panzo.mx/v1/events?from=2026-03-01&to=2026-03-31&limit=100&cursor=8500" \
+curl "https://api.axelo.mx/v1/events?from=2026-03-01&to=2026-03-31&limit=100&cursor=8500" \
   -H "X-API-Key: TU_API_KEY"
 ```
 
@@ -127,7 +127,7 @@ CURSOR=0
 PAGE=1
 
 while true; do
-  URL="https://comms.panzo.mx/v1/events?from=2026-03-01&to=2026-03-31&channel=email&limit=500"
+  URL="https://api.axelo.mx/v1/events?from=2026-03-01&to=2026-03-31&channel=email&limit=500"
   if [ "$CURSOR" -gt 0 ]; then
     URL="${URL}&cursor=${CURSOR}"
   fi

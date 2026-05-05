@@ -6,15 +6,19 @@ description: "Referencia completa de endpoints de Axelo."
 ## Base URL
 
 ```
-https://comms.panzo.mx
+https://api.axelo.mx
 ```
+
+<Note>
+  El alias legacy `https://comms.panzo.mx` sigue funcionando indefinidamente para integraciones existentes. Ambos hosts apuntan al mismo backend.
+</Note>
 
 ## Autenticación
 
 Todos los endpoints `/v1/` requieren el header `X-API-Key` con tu API key de tenant:
 
 ```bash
-curl https://comms.panzo.mx/v1/send/email \
+curl https://api.axelo.mx/v1/send/email \
   -H "X-API-Key: TU_API_KEY" \
   ...
 ```
@@ -53,7 +57,7 @@ Los rate limits se configuran por tier de plan (free/pro). Si los excedes, recib
 ## Health check
 
 ```bash
-curl https://comms.panzo.mx/health
+curl https://api.axelo.mx/health
 ```
 
 ```json

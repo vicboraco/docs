@@ -28,7 +28,7 @@ pending → running → success
 ## Consultar un job
 
 ```bash
-curl https://comms.panzo.mx/v1/jobs/{job_id} \
+curl https://api.axelo.mx/v1/jobs/{job_id} \
   -H "X-API-Key: TU_API_KEY"
 ```
 
@@ -71,7 +71,7 @@ def wait_for_job(job_id, api_key, max_retries=10):
     delay = 1
     for _ in range(max_retries):
         r = requests.get(
-            f"https://comms.panzo.mx/v1/jobs/{job_id}",
+            f"https://api.axelo.mx/v1/jobs/{job_id}",
             headers={"X-API-Key": api_key}
         )
         data = r.json()

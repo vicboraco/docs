@@ -12,7 +12,7 @@ description: "Envía tu primer email transaccional en menos de 5 minutos."
 ## 1. Verifica tu acceso
 
 ```bash
-curl https://comms.panzo.mx/health
+curl https://api.axelo.mx/health
 ```
 
 Respuesta esperada:
@@ -24,7 +24,7 @@ Respuesta esperada:
 ## 2. Envía un email
 
 ```bash
-curl -X POST https://comms.panzo.mx/v1/send/email \
+curl -X POST https://api.axelo.mx/v1/send/email \
   -H "Content-Type: application/json" \
   -H "X-API-Key: TU_API_KEY" \
   -d '{
@@ -50,7 +50,7 @@ Respuesta:
 ## 3. Consulta el resultado
 
 ```bash
-curl https://comms.panzo.mx/v1/jobs/a1b2c3d4-... \
+curl https://api.axelo.mx/v1/jobs/a1b2c3d4-... \
   -H "X-API-Key: TU_API_KEY"
 ```
 
