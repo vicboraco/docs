@@ -32,8 +32,8 @@ POST /v1/send/whatsapp
 | Campo | Tipo | Requerido | Descripción |
 |-------|------|-----------|-------------|
 | `phone_number` | string | ✅ | Número en formato internacional sin `+` (ej. `521234567890`) |
-| `template_id` | string | ✅ | Nombre exacto del template aprobado en Meta Business Manager |
-| `language_code` | string | — | Código de idioma del template. Default: `es` |
+| `template_id` | string | ✅ | Alias amigable registrado en el dashboard (ej. `confirmacion`) **o** el nombre completo del template en Meta. Si el alias existe en tu tenant, Axelo lo traduce automáticamente; si no, se pasa tal cual a Meta |
+| `language_code` | string | — | Código de idioma del template. Si usas alias y omites este campo, se toma del registro. Default global: `es` |
 | `params` | array | — | Valores posicionales para `{{1}}`, `{{2}}`, etc. del template |
 
 ## Ejemplo
@@ -49,6 +49,10 @@ curl -X POST https://api.axelo.mx/v1/send/whatsapp \
     "params":        ["Carlos Mendoza", "30 de marzo", "3:00 PM", "Sala Norte"]
   }'
 ```
+
+<Note>
+  `confirmacion_reserva` puede ser un alias amigable que registraste en el dashboard (mapeado a un template real de Meta), o directamente el nombre exacto que ves en Meta Business Manager. Los aliases simplifican las integraciones porque los templates con header media de Meta llevan un sufijo `_hxXXXX...` largo que es feo en el código del cliente.
+</Note>
 
 Si el template es:
 

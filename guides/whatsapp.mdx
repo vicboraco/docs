@@ -41,9 +41,20 @@ curl -X POST https://api.axelo.mx/v1/send/whatsapp \
 | Campo | Tipo | Requerido | Descripción |
 |-------|------|-----------|-------------|
 | `phone_number` | string | ✅ | Número en formato internacional sin `+` (ej. `521234567890`) |
-| `template_id` | string | ✅ | Nombre del template en Meta (snake_case) |
-| `language_code` | string | — | Código de idioma del template. Default: `es` |
+| `template_id` | string | ✅ | Alias amigable registrado en el dashboard, o el nombre exacto del template en Meta (snake_case). Axelo resuelve el alias automáticamente |
+| `language_code` | string | — | Código de idioma. Si usas alias, se infiere del registro |
 | `params` | array | — | Valores para `{{1}}`, `{{2}}`, etc. en orden |
+
+### Alias de templates
+
+Los templates con header media en Meta llevan un sufijo `_hxXXXX...` (hash del contenido) que es ilegible. Para usar nombres limpios en tu código, registra un alias en el dashboard:
+
+| Alias (`wa_template_id`) | Nombre real en Meta (`meta_name`) |
+|--------------------------|-----------------------------------|
+| `confirmacion` | `torneospro_confirmacion_hx97bb9c99ad7...` |
+| `partido` | `torneospro_partido_v2_hxf2a40395f1d...` |
+
+Después puedes llamar la API con `"template_id": "confirmacion"` y Axelo traduce al nombre real antes de enviar a Meta. Si el alias no existe en tu tenant, el `template_id` se manda tal cual.
 
 ## Gestionar templates
 
