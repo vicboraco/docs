@@ -18,6 +18,8 @@ POST /v1/send/email
 
 ## Body
 
+Debes enviar **`template_id`** (plantilla registrada) **o** **`html`** (HTML crudo inline), no ambos.
+
 ```json
 {
   "to_address":  "usuario@ejemplo.com",
@@ -38,8 +40,34 @@ POST /v1/send/email
 | `to_address` | string | ✅ | Dirección de email destino |
 | `to_name` | string | — | Nombre del destinatario (aparece en el "Para:") |
 | `subject` | string | — | Asunto del email. Soporta variables `{{.var}}`. Si se omite, usa el subject de la plantilla |
-| `template_id` | string | ✅ | ID de la plantilla HTML registrada en el dashboard |
-| `data` | object | — | Mapa de variables para inyectar en la plantilla y el subject |
+| `template_id` | string | Condicional | ID de la plantilla HTML registrada en el dashboard. Requerido si no envías `html` |
+| `html` | string | Condicional | HTML crudo inline (alternativa a `template_id`). Requiere el permiso `allow_raw_html` en tu tenant |
+| `data` | object | — | Mapa de variables para inyectar en la plantilla/HTML y el subject |
+
+## HTML inline
+
+En lugar de una plantilla registrada puedes enviar el HTML completo en el campo `html`. Esta capacidad
+está controlada por tu proveedor (permiso `allow_raw_html`) por su impacto en la reputación de entrega,
+y pasa por validaciones automáticas:
+
+- **Permiso**: si tu tenant no tiene `allow_raw_html`, la petición responde `403`.
+- **Heurísticas de contenido**: HTML vacío, demasiado grande, solo-imagen o con `<script>` se rechaza con `422` (incluye la lista de `violations`).
+- **Filtro de spam**: cuando está habilitado, el mensaje se puntúa; si supera el umbral el job queda `failed` (visible en Logs, sin cobro).
+
+```json
+{
+  "to_address": "cliente@ejemplo.com",
+  "subject":    "Hola {{.nombre}}",
+  "html":       "<html><body><h1>Hola {{.nombre}}</h1><p>...</p></body></html>",
+  "data":       { "nombre": "Ana" }
+}
+```
+
+<Note>
+Todos los emails incluyen automáticamente los headers `List-Unsubscribe` y one-click (RFC 8058). Los
+destinatarios que se den de baja (o que reboten) se agregan a una lista de supresión por tenant y se
+omiten en envíos futuros (el job queda con estado `suppressed`).
+</Note>
 
 ## Ejemplo
 
@@ -75,8 +103,9 @@ Usa el `job_id` para consultar el resultado con [GET /v1/jobs/{job_id}](/api-ref
 
 | Código | Causa |
 |--------|-------|
-| `400` | `template_id` vacío o body malformado |
+| `400` | Falta `to_address`, o no enviaste ni `template_id` ni `html`, o body malformado |
 | `401` | API key inválida |
-| `403` | Canal email no habilitado para tu tenant |
+| `403` | Canal email no habilitado, o `html` inline sin permiso `allow_raw_html` |
+| `422` | HTML inline rechazado por las heurísticas de contenido (devuelve `violations`) |
 | `500` | Error al encolar el job |
 
