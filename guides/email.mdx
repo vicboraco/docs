@@ -11,7 +11,12 @@ El canal de email usa **Postfix** como MTA con autenticación de dominio complet
 - **DKIM** — cada email lleva firma criptográfica
 - **DMARC** — política de autenticación publicada en DNS
 
-Los emails se renderizan combinando la plantilla HTML almacenada en el servidor con el objeto `data` que envías en el request, usando sintaxis de Go templates (`{{.variable}}`).
+Tienes **dos formas** de definir el contenido de un email:
+
+1. **Plantilla registrada** (`template_id`) — creas el HTML una vez en el dashboard y lo reutilizas.
+2. **HTML inline** (`html`) — envías el HTML completo en el propio request, sin registrar plantilla.
+
+En ambos casos el HTML se combina con el objeto `data` usando sintaxis de Go templates (`{{.variable}}`).
 
 ## Crear una plantilla
 
@@ -47,8 +52,55 @@ curl -X POST https://api.axelo.mx/v1/send/email \
 | `to_address` | string | ✅ | Dirección de destino |
 | `to_name` | string | — | Nombre del destinatario |
 | `subject` | string | — | Asunto (soporta variables). Si se omite, usa el subject de la plantilla |
-| `template_id` | string | ✅ | ID de la plantilla HTML |
-| `data` | object | — | Variables para inyectar en la plantilla |
+| `template_id` | string | Condicional | ID de la plantilla HTML. Requerido si **no** envías `html` |
+| `html` | string | Condicional | HTML crudo inline (alternativa a `template_id`). Requiere el permiso `allow_raw_html` |
+| `data` | object | — | Variables para inyectar en el HTML y el subject |
+
+<Note>
+Envía **`template_id` o `html`**, no ambos. Si mandas los dos, `html` tiene precedencia.
+</Note>
+
+## Enviar HTML inline (sin plantilla)
+
+Si prefieres generar el HTML desde tu propia plataforma, mándalo directo en el campo `html`:
+
+```bash
+curl -X POST https://api.axelo.mx/v1/send/email \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: TU_API_KEY" \
+  -d '{
+    "to_address": "juan@ejemplo.com",
+    "subject":    "Hola {{.nombre}}",
+    "html":       "<html><body><h1>Hola {{.nombre}}</h1><p>Tu pedido va en camino.</p></body></html>",
+    "data":       { "nombre": "Juan" }
+  }'
+```
+
+Como el HTML crudo tiene mayor impacto en la reputación de entrega (se envía sobre infraestructura
+compartida), esta capacidad está protegida. Implicaciones a tener en cuenta:
+
+- **Requiere permiso.** El campo `html` solo funciona si tu tenant tiene habilitado `allow_raw_html`
+  (lo activa tu proveedor). Si no, la API responde `403`. Las plantillas registradas (`template_id`)
+  no requieren este permiso.
+- **Validación de contenido.** Antes de encolar se corren heurísticas: HTML vacío, demasiado grande
+  (>512 KB), solo-imagen (sin texto) o con `<script>` se rechaza de inmediato con `422` e incluye la
+  lista de `violations`.
+- **Filtro de spam.** El mensaje se puntúa con un motor tipo SpamAssassin. Si supera el umbral, el job
+  no se envía: queda en estado `failed` con el `spam_score` y las reglas disparadas (visible en Logs).
+  No se te cobra por un email rechazado.
+
+<Tip>
+Consejo: manda siempre una versión con texto real (no solo imágenes), evita URLs acortadas y
+mantén una relación equilibrada texto/HTML. Puedes previsualizar tu puntaje en herramientas como
+[mail-tester.com](https://www.mail-tester.com) antes de automatizar envíos masivos.
+</Tip>
+
+## Bajas (List-Unsubscribe)
+
+Todos los emails — con plantilla o inline — incluyen automáticamente los headers `List-Unsubscribe`
+y one-click (RFC 8058) que Gmail y Yahoo exigen. Cuando un destinatario se da de baja (o su dirección
+rebota), se agrega a una **lista de supresión por tenant** y se omite en envíos futuros: esos jobs
+quedan con estado `suppressed` (sin envío ni cobro). No necesitas hacer nada para habilitarlo.
 
 ## Variables
 
