@@ -72,6 +72,7 @@
           {
             "group": "Webhooks",
             "pages": [
+              "api-reference/events-webhook",
               "api-reference/webhook-whatsapp"
             ]
           }

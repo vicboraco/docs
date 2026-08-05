@@ -1,0 +1,97 @@
+---
+title: "Webhook de eventos"
+description: "Recibe un POST firmado por cada evento de entrega (todos los canales)."
+---
+
+## Qué es
+
+En vez de hacer *polling* de [`/v1/events`](/api-reference/list-events), puedes registrar una URL y
+Axelo te enviará un **POST por cada evento de entrega** — de email, WhatsApp y wallet:
+
+`sent` · `opened` · `clicked` · `bounced` · `failed` · `suppressed`
+
+La entrega es asíncrona y con **reintentos automáticos** (backoff exponencial) si tu endpoint no
+responde `2xx`.
+
+## Configurar
+
+Desde el dashboard (admin → detalle del tenant → **Webhook de eventos**) registra tu URL. Al
+guardarla se genera un **secreto de firma** (`whsec_...`) que se muestra ahí mismo. Deja la URL
+vacía para deshabilitar.
+
+## Payload
+
+```json
+{
+  "id": 2869,
+  "tenant_id": "tu-tenant",
+  "channel": "email",
+  "event_type": "sent",
+  "job_id": "0e35a2ba-afe5-4ae1-a82c-0b717fd09b48",
+  "recipient": "cliente@ejemplo.com",
+  "result": { "delivered_to": "cliente@ejemplo.com", "sending_domain": "mail.axelo.mx" },
+  "timestamp": "2026-08-05T03:22:53Z"
+}
+```
+
+Headers de cada request:
+
+| Header | Valor |
+|--------|-------|
+| `Content-Type` | `application/json` |
+| `X-Axelo-Event` | el `event_type` (para enrutar rápido) |
+| `X-Axelo-Signature-256` | `sha256=<hmac>` — firma del cuerpo |
+
+<Note>
+`id` es el `event_id` único. La entrega es **at-least-once** (en un reinicio un evento podría
+repetirse): usa `id` para deduplicar.
+</Note>
+
+## Verificar la firma
+
+Calcula `HMAC-SHA256` sobre el **cuerpo crudo** con tu `events_webhook_secret` y compáralo (en tiempo
+constante) con el header `X-Axelo-Signature-256`.
+
+<CodeGroup>
+```js Node.js
+import crypto from 'crypto'
+
+function verify(rawBody, signatureHeader, secret) {
+  const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(rawBody).digest('hex')
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signatureHeader))
+}
+
+// Express: usa el cuerpo CRUDO (no el parseado)
+app.post('/webhooks/axelo', express.raw({ type: 'application/json' }), (req, res) => {
+  if (!verify(req.body, req.get('X-Axelo-Signature-256'), process.env.AXELO_WEBHOOK_SECRET)) {
+    return res.status(401).end()
+  }
+  const event = JSON.parse(req.body)
+  // ... procesar event ...
+  res.status(200).end()
+})
+```
+
+```php PHP
+$raw = file_get_contents('php://input');
+$expected = 'sha256=' . hash_hmac('sha256', $raw, getenv('AXELO_WEBHOOK_SECRET'));
+if (!hash_equals($expected, $_SERVER['HTTP_X_AXELO_SIGNATURE_256'] ?? '')) {
+    http_response_code(401);
+    exit;
+}
+$event = json_decode($raw, true);
+// ... procesar $event ...
+http_response_code(200);
+```
+</CodeGroup>
+
+<Warning>
+Firma **el cuerpo crudo** tal cual llega, antes de parsear el JSON — reserializar cambia los bytes e
+invalida la firma.
+</Warning>
+
+## Reintentos
+
+Si tu endpoint devuelve un código fuera de `2xx` (o falla la conexión), Axelo reintenta con backoff.
+Responde `2xx` en cuanto recibas el evento (procesa de forma asíncrona de tu lado) para evitar
+reintentos innecesarios.
