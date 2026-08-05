@@ -424,7 +424,7 @@
     "/v1/jobs/{id}/events": {
       "get": {
         "summary": "Get delivery events for a job",
-        "description": "Returns all delivery status events for a single job, in chronological order.\n\nA job produces events as it progresses through the delivery pipeline.\nFor example, a WhatsApp message generates `sent` when dispatched to Meta,\nthen `delivered` when Meta confirms the handset received it, and `read` when\nthe recipient opens the conversation.\n\nFor email, events include `sent`, `opened` (tracking pixel), `clicked` (link\nrewrite), and `bounced` (Postfix bounce pipe).\n\nA typical job has 1–5 events. No pagination is needed.\n",
+        "description": "Returns all delivery status events for a single job, in chronological order.\n\nA job produces events as it progresses through the delivery pipeline.\nFor example, a WhatsApp message generates `sent` when dispatched to Meta,\nthen `delivered` when Meta confirms the handset received it, and `read` when\nthe recipient opens the conversation.\n\nFor email, events include `sent` (queued by our SMTP), `delivered` (remote MTA\nreturned 250, detected from the Postfix log), `opened` (tracking pixel), `clicked`\n(link rewrite), and `bounced` (Postfix bounce pipe).\n\nA typical job has 1–5 events. No pagination is needed.\n",
         "operationId": "getJobEvents",
         "tags": [
           "Events"
@@ -1204,9 +1204,10 @@
               "opened",
               "clicked",
               "bounced",
-              "failed"
+              "failed",
+              "suppressed"
             ],
-            "description": "Delivery stage:\n- `sent` — dispatched to the channel provider\n- `delivered` — confirmed received by the handset (WhatsApp only)\n- `read` — recipient opened the message (WhatsApp only)\n- `opened` — tracking pixel fired (Email only)\n- `clicked` — recipient clicked a tracked link (Email only)\n- `bounced` — hard bounce returned by Postfix (Email only)\n- `failed` — delivery error at any stage\n"
+            "description": "Delivery stage:\n- `sent` — accepted by the channel provider (Email: queued by our SMTP server)\n- `delivered` — confirmed received by the recipient's server. WhatsApp: Meta confirms the handset. Email: the remote MTA returned `250` (detected from the Postfix log).\n- `read` — recipient opened the message (WhatsApp only)\n- `opened` — tracking pixel fired (Email only)\n- `clicked` — recipient clicked a tracked link (Email only)\n- `bounced` — hard bounce returned by the remote MTA (Email only)\n- `failed` — delivery error at any stage\n- `suppressed` — recipient is on the suppression list (unsubscribed/bounced); the send was skipped (Email only)\n"
           },
           "result": {
             "type": "object",

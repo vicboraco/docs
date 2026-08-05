@@ -73,10 +73,12 @@ Los eventos se retornan en **orden cronológico** (el más antiguo primero).
 
 | Evento | Descripción |
 |--------|-------------|
-| `sent` | Mensaje enviado por Postfix |
+| `sent` | Aceptado por nuestro servidor SMTP (encolado para envío) |
+| `delivered` | El servidor del destinatario confirmó la recepción (250), detectado del log de Postfix |
 | `opened` | El destinatario cargó el pixel de tracking |
 | `clicked` | El destinatario hizo clic en un enlace del email |
-| `bounced` | Rebote duro devuelto por Postfix |
+| `bounced` | Rebote duro devuelto por el servidor remoto |
+| `suppressed` | Destinatario en la lista de supresión (baja/rebote previo); no se envió |
 | `failed` | Error de entrega |
 
 ## Errores
