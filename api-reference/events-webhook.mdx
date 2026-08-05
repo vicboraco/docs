@@ -8,7 +8,10 @@ description: "Recibe un POST firmado por cada evento de entrega (todos los canal
 En vez de hacer *polling* de [`/v1/events`](/api-reference/list-events), puedes registrar una URL y
 Axelo te enviará un **POST por cada evento de entrega** — de email, WhatsApp y wallet:
 
-`sent` · `opened` · `clicked` · `bounced` · `failed` · `suppressed`
+`sent` · `delivered` · `opened` · `clicked` · `bounced` · `failed` · `suppressed`
+
+Para email: `sent` = aceptado por el servidor de Axelo; `delivered` = el servidor del destinatario
+confirmó la recepción (250). `opened`/`clicked` prueban además que el destinatario interactuó.
 
 La entrega es asíncrona y con **reintentos automáticos** (backoff exponencial) si tu endpoint no
 responde `2xx`.
