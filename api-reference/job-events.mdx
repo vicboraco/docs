@@ -74,12 +74,20 @@ Los eventos se retornan en **orden cronológico** (el más antiguo primero).
 | Evento | Descripción |
 |--------|-------------|
 | `sent` | Aceptado por nuestro servidor SMTP (encolado para envío) |
-| `delivered` | El servidor del destinatario confirmó la recepción (250), detectado del log de Postfix |
+| `delivered` | El servidor del destinatario confirmó la recepción (250) |
 | `opened` | El destinatario cargó el pixel de tracking |
 | `clicked` | El destinatario hizo clic en un enlace del email |
 | `bounced` | Rebote duro devuelto por el servidor remoto |
+| `complained` | El destinatario marcó el correo como spam (queja FBL) |
 | `suppressed` | Destinatario en la lista de supresión (baja/rebote previo); no se envió |
 | `failed` | Error de entrega |
+
+<Note>
+  Si envías con tu **propia cuenta de Resend**, los eventos `delivered`, `bounced` y `complained`
+  llegan a Axelo cuando configuras un webhook en Resend apuntando a
+  `https://api.axelo.mx/webhooks/resend/TU_TENANT` y pegas su *Signing Secret* en el dashboard
+  (Canales → Email). `opened` y `clicked` se registran automáticamente sin configuración extra.
+</Note>
 
 ## Errores
 
