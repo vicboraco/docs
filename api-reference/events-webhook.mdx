@@ -50,6 +50,12 @@ Headers de cada request:
 repetirse): usa `id` para deduplicar.
 </Note>
 
+<Note>
+En eventos `bounced` de envíos por Resend, `result` incluye el detalle del rebote:
+`bounce_type` (`Permanent` | `Transient`), `bounce_subtype` y `diagnostic_code` (p. ej.
+`"smtp; 550 5.4.4 Invalid domain"`). Solo los rebotes `Permanent` suprimen al destinatario.
+</Note>
+
 ## Verificar la firma
 
 Calcula `HMAC-SHA256` sobre el **cuerpo crudo** con tu `events_webhook_secret` y compáralo (en tiempo
