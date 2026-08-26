@@ -70,6 +70,12 @@
             ]
           },
           {
+            "group": "Dominios",
+            "pages": [
+              "api-reference/custom-domains"
+            ]
+          },
+          {
             "group": "Webhooks",
             "pages": [
               "api-reference/events-webhook",

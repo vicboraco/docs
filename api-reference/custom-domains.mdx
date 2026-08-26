@@ -1,0 +1,81 @@
+---
+title: "Dominios propios"
+description: "Envía desde tu propio dominio y consulta el estado de verificación."
+---
+
+## Qué es
+
+Puedes enviar correo **desde tu propio dominio** (p. ej. `mail.tuempresa.com`). Tu equipo de Axelo da de alta
+el dominio; tú publicas los registros DNS que te indicamos y luego verificas. Estos endpoints te dejan
+**consultar el estado y los registros** con tu API key.
+
+<Note>
+El alta del dominio la realiza Axelo (o tú, desde el dashboard). Aquí consultas y disparas la verificación.
+Recomendamos un **subdominio de envío** (`mail.tuempresa.com`) para aislar la reputación.
+</Note>
+
+## Listar tus dominios
+
+```
+GET /v1/domains
+```
+
+```bash
+curl https://api.axelo.mx/v1/domains -H "X-API-Key: TU_API_KEY"
+```
+
+```json
+{
+  "domains": [
+    {
+      "Domain": "mail.tuempresa.com",
+      "ResendEnabled": true,
+      "ResendStatus": "pending",
+      "SMTPEnabled": false,
+      "SMTPStatus": "pending",
+      "DNSRecords": {
+        "resend": [
+          { "type": "MX",  "name": "send",              "value": "feedback-smtp.us-east-1.amazonses.com", "priority": 10 },
+          { "type": "TXT", "name": "send",              "value": "v=spf1 include:amazonses.com ~all" },
+          { "type": "TXT", "name": "resend._domainkey", "value": "p=MIGf..." }
+        ]
+      }
+    }
+  ]
+}
+```
+
+Publica cada registro en el DNS de tu dominio (tipo, nombre/host y valor; `priority` solo aplica a `MX`).
+
+## Consultar un dominio
+
+```
+GET /v1/domains/{domain}
+```
+
+## Verificar (re-chequear DNS)
+
+```
+POST /v1/domains/{domain}/verify
+```
+
+Dispara una revisión de los registros publicados y devuelve el estado actualizado. `ResendStatus` /
+`SMTPStatus` pasan a `verified` cuando el DNS está correcto.
+
+```bash
+curl -X POST https://api.axelo.mx/v1/domains/mail.tuempresa.com/verify \
+  -H "X-API-Key: TU_API_KEY"
+```
+
+<Warning>
+Si intentas **enviar** desde un dominio propio **no verificado**, la API responde `422`. Verifica el dominio
+antes de enviar. Los dominios compartidos de Axelo no requieren este paso.
+</Warning>
+
+## Estados
+
+| Estado | Significado |
+|--------|-------------|
+| `pending` | Registros DNS aún no verificados |
+| `verified` | Dominio listo para enviar |
+| `failed` | La verificación falló (revisa los registros) |
