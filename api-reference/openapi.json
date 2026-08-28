@@ -646,7 +646,7 @@
     "/v1/tenant/config": {
       "get": {
         "summary": "Get tenant channel configuration",
-        "description": "Returns the current channel credentials configured for your tenant.\n\nNote: channel availability is controlled by the platform operator. If a channel\nis not enabled for your tenant, calling the corresponding `/v1/send/*` endpoint\nwill return `403 channel not enabled for this tenant`.\n",
+        "description": "Returns the current channel credentials configured for your tenant. **Secrets are masked** (e.g. `resend_api_key`, `smtp_password`, `access_token` show as `****abcd`; certificates as `[configurado]`).\n\nNote: channel availability is controlled by the platform operator. If a channel\nis not enabled for your tenant, calling the corresponding `/v1/send/*` endpoint\nwill return `403 channel not enabled for this tenant`.\n",
         "operationId": "getTenantConfig",
         "tags": [
           "Tenant"
@@ -672,7 +672,7 @@
       },
       "put": {
         "summary": "Update tenant channel configuration",
-        "description": "Merges the provided configuration into your tenant's existing config.\nOnly the channels you include in the request body are updated — other\nchannels are left unchanged.\n\nTo remove a channel's config, set it to `null`:\n```json\n{ \"whatsapp\": null }\n```\n",
+        "description": "Merges the provided **channel credentials** into your tenant's existing config. Only `email`, `whatsapp`, `apple_wallet` and `google_wallet` can be set here, and only for channels the operator marked tenant-customizable (`allow_custom`). Privileged fields (`channels`, `billing`, `events_webhook_url`, `wallet_webhook_url`, `*_secret`) are **admin-only** and silently ignored if sent. Masked secrets echoed back unchanged (`****abcd`) are preserved.\n\nTo remove a channel's config, set it to `null`:\n```json\n{ \"whatsapp\": null }\n```\n",
         "operationId": "putTenantConfig",
         "tags": [
           "Tenant"
@@ -698,8 +698,8 @@
                   "summary": "Configure WhatsApp credentials",
                   "value": {
                     "whatsapp": {
-                      "phone_number_id": "1017915694740900",
-                      "access_token": "EAANpv..."
+                      "phone_number_id": "1234567890",
+                      "access_token": "EAAG..."
                     }
                   }
                 }
